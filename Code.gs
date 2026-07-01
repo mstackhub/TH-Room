@@ -2508,7 +2508,8 @@ function loginUser(ss, email, password) {
       email: user.email,
       name: user.name,
       role: user.role,
-      status: user.status
+      status: user.status,
+      permissions: user.permissions
     }
   };
 }
