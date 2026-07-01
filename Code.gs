@@ -459,10 +459,16 @@ function getInitData(ss, user) {
     brands: brands
   };
 
-  if (String(user.role || '').trim().toLowerCase() === 'master admin') {
+  var allowedTabs = user.permissions ? String(user.permissions.allowedTabs || '').toLowerCase() : '';
+  var isMasterAdmin = String(user.role || '').trim().toLowerCase() === 'master admin';
+  
+  if (allowedTabs.indexOf('rooms') !== -1 || isMasterAdmin) {
     result.allRoomsAdmin = allRoomsAdmin;
+  }
+  if (allowedTabs.indexOf('brands') !== -1 || isMasterAdmin) {
     result.allBrandsAdmin = allBrandsAdmin;
-    
+  }
+  if (allowedTabs.indexOf('users') !== -1 || isMasterAdmin) {
     var usersSheet = ss.getSheetByName("Users");
     var usersData = usersSheet.getDataRange().getValues();
     var allUsersAdmin = [];
