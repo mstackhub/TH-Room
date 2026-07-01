@@ -2310,9 +2310,9 @@ function openBookingEditModal(bookingId) {
     lucide.createIcons();
   }
   
-  // Show status select
+  // Set status value silently but keep it hidden
   const statusContainer = document.getElementById('booking-form-status-container');
-  statusContainer.classList.remove('hidden');
+  statusContainer.classList.add('hidden');
   document.getElementById('booking-form-status').value = b.status;
   
   // Display ownership
