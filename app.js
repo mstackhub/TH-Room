@@ -3447,7 +3447,7 @@ function renderUsersTable() {
   if (!tbody) return;
   tbody.innerHTML = "";
   if (!state.allUsersAdmin || state.allUsersAdmin.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">ไม่มีข้อมูลผู้ใช้งาน</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">ไม่มีข้อมูลผู้ใช้งาน</td></tr>`;
     return;
   }
   state.allUsersAdmin.forEach(u => {
@@ -3455,7 +3455,6 @@ function renderUsersTable() {
     tbody.innerHTML += `
       <tr class="hover:bg-slate-50/50">
         <td class="p-4 font-semibold text-slate-800">${u.email}</td>
-        <td class="p-4 font-mono text-xs text-slate-500">${u.password || "-"}</td>
         <td class="p-4 font-medium text-slate-600">${u.name}</td>
         <td class="p-4"><span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-semibold">${u.role}</span></td>
         <td class="p-4 text-center">
