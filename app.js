@@ -4653,64 +4653,6 @@ function setCalendarToCurrentMonth() {
 /**
  * Render Calendar Grid Days (Selector routing based on view mode)
  */
-function renderCalendarDailyDetail(dateStr) {
-  const container = document.getElementById('calendar-daily-detail-container');
-  const label = document.getElementById('calendar-daily-detail-date-label');
-  const list = document.getElementById('calendar-daily-detail-list');
-  
-  if (!container || !list) return;
-  
-  label.innerText = formatThaiDate(dateStr);
-  
-  const dayBookings = state.calendarBookings.filter(b => b.date === dateStr && b.status !== 'Cancelled');
-  
-  if (dayBookings.length === 0) {
-    list.innerHTML = `
-      <div class="text-center py-6 text-xs text-slate-400 dark:text-slate-500 flex flex-col items-center gap-1.5">
-        <i data-lucide="inbox" class="w-6 h-6 text-slate-300"></i>
-        <span>ไม่มีรายการจองห้องไลฟ์ในวันนี้</span>
-      </div>
-    `;
-    container.classList.remove('hidden');
-    lucide.createIcons();
-    return;
-  }
-  
-  dayBookings.sort((x, y) => parseTimeToMinutes(x.startTime) - parseTimeToMinutes(y.startTime));
-  
-  list.innerHTML = dayBookings.map(b => {
-    let statusClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50";
-    if (b.status === "Completed") {
-      statusClass = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50";
-    }
-    
-    return `
-      <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/80 flex flex-col gap-2 relative">
-        <div class="flex justify-between items-start">
-          <div class="text-xs font-bold text-slate-900 dark:text-white">${b.startTime} - ${b.endTime} น.</div>
-          <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusClass}">${b.status === 'Completed' ? 'เสร็จสิ้น' : 'จองแล้ว'}</span>
-        </div>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <span class="text-slate-400 text-[10px] block">ลูกค้า (Brand)</span>
-            <span class="font-semibold text-slate-700 dark:text-slate-300">${b.brandName}</span>
-          </div>
-          <div>
-            <span class="text-slate-400 text-[10px] block">ห้องไลฟ์ (Room)</span>
-            <span class="font-semibold text-slate-700 dark:text-slate-300">${b.roomName}</span>
-          </div>
-          <div class="col-span-2">
-            <span class="text-slate-400 text-[10px] block">ชื่อแคมเปญ (Campaign)</span>
-            <span class="font-semibold text-slate-700 dark:text-slate-300">${b.campaignName}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  container.classList.remove('hidden');
-  lucide.createIcons();
-}
 
 function renderCalendarGrid() {
   const grid = document.getElementById('calendar-grid');
@@ -4727,7 +4669,6 @@ function renderCalendarGrid() {
   }
   
   lucide.createIcons();
-  renderCalendarDailyDetail(state.selectedDate);
 }
 
 /**
@@ -4874,10 +4815,6 @@ function createCalendarDayNode(dayNum, dateStr, isOtherMonth) {
       box.classList.remove('ring-2', 'ring-brand-500', 'z-10');
     });
     container.classList.add('ring-2', 'ring-brand-500', 'z-10');
-    
-    // Update daily schedule detail display
-    renderCalendarDailyDetail(dateStr);
-    
     if (hasTabPermission('scheduler')) {
       switchTab('scheduler');
     }
