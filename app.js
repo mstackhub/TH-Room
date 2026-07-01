@@ -144,7 +144,11 @@ window.addEventListener('DOMContentLoaded', () => {
  * Helper to get the lowercase role of the current user
  */
 function getUserRole() {
-  return (state.currentUser && state.currentUser.role) ? String(state.currentUser.role).trim().toLowerCase() : '';
+  if (!state.currentUser || !state.currentUser.role) return '';
+  const r = String(state.currentUser.role).trim().toLowerCase();
+  if (r === 'master admin' || r === 'ผู้ดูแลระบบสูงสุด') return 'master admin';
+  if (r === 'admin' || r === 'แอดมิน' || r === 'หัวหน้าแอดมิน' || r === 'head admin') return 'admin';
+  return r;
 }
 
 /**
@@ -614,6 +618,10 @@ function fetchInitData(isSilent = false) {
       // 5-10s race condition where the sidebar showed wrong menus because the
       // cached localStorage user didn't have permissions yet.
       applySidebarPermissions();
+      
+      // Re-evaluate tab permissions and automatically redirect the user if they
+      // do not have permission for the current tab (e.g. initial login fallback)
+      switchTab(state.currentTab);
     }
     state.rooms = data.rooms;
     state.brands = data.brands;
