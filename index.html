@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live Studio Booking System</title>
+  <link rel="icon" type="image/png" href="logo-TH.png">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Tailwind Configuration for custom styles -->
@@ -38,9 +39,11 @@
   <!-- ==================== 1. LOGIN PAGE ==================== -->
   <div id="login-page" class="hidden flex-1 flex flex-col justify-center items-center p-6 min-h-screen">
     <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-xl flex flex-col items-center">
+      <!-- Logo -->
+      <img src="logo-TH.png" alt="TH Logo" class="h-16 w-auto object-contain mb-4">
       <!-- Headings -->
-      <h1 class="text-2xl font-bold text-slate-900 tracking-tight text-center font-mono">Live Studio Booking</h1>
-      <p class="text-xs text-slate-500 mt-2 mb-6 text-center">ระบบบริหารจัดการห้องไลฟ์สดสำหรับทีม Campaign</p>
+      <h1 class="text-xl font-bold text-slate-900 tracking-tight text-center font-mono">Live Studio Booking</h1>
+      <p class="text-xs text-slate-500 mt-1.5 mb-6 text-center">ระบบบริหารจัดการห้องไลฟ์สดสำหรับทีม Campaign</p>
       
       <!-- Login Form -->
       <form id="login-form" onsubmit="event.preventDefault(); handleCustomLogin();" class="w-full flex flex-col gap-4">
@@ -83,9 +86,12 @@
     <aside id="app-sidebar" class="bg-white border-r border-slate-200 w-[260px] flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out">
       <!-- Sidebar Header (Logo/Title) -->
       <div class="h-16 border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
-        <div>
-          <h1 class="text-lg font-bold text-slate-900 leading-tight">Live Studio</h1>
-          <p class="text-[10px] text-slate-500 leading-none">Booking Management</p>
+        <div class="flex items-center gap-2.5">
+          <img src="logo-TH.png" alt="TH Logo" class="h-8 w-auto object-contain">
+          <div>
+            <h1 class="text-sm font-bold text-slate-900 leading-tight">Live Studio</h1>
+            <p class="text-[9px] text-slate-500 leading-none">Booking Management</p>
+          </div>
         </div>
         <!-- Close button on Mobile/Tablet -->
         <button onclick="toggleSidebar(false)" class="p-1 hover:bg-slate-100 rounded-md md:hidden text-slate-400 hover:text-slate-600">
