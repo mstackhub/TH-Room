@@ -306,6 +306,7 @@ function handleCustomLogin() {
       const token = email + ":mock_token_" + new Date().getTime();
       state.authToken = token;
       state.currentUser = user;
+      state.tabLoaded = {}; // Reset tab loading flags to prevent session state leakage
       localStorage.setItem('auth_token', token);
       localStorage.setItem('auth_user', JSON.stringify(user));
       
@@ -338,6 +339,7 @@ function handleCustomLogin() {
       if (data.success) {
         state.authToken = data.token;
         state.currentUser = data.user;
+        state.tabLoaded = {}; // Reset tab loading flags to prevent session state leakage
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         
@@ -622,6 +624,18 @@ function fetchInitData(isSilent = false) {
       state.tabLoaded['calendar'] = true;
       state.tabLoaded['analytics'] = true;
       state.tabLoaded['campaign-schedule'] = true;
+      
+      // Sync myBookings locally from data.allBookings to make My Bookings render instantly
+      if (state.currentUser && state.currentUser.email) {
+        state.myBookings = state.calendarBookings.filter(b =>
+          b.ownerEmail && b.ownerEmail.toLowerCase() === state.currentUser.email.toLowerCase()
+        );
+        state.tabLoaded['my-bookings'] = true;
+        try {
+          localStorage.setItem('cached_my_bookings', JSON.stringify(state.myBookings));
+        } catch (e) {}
+      }
+
       try {
         localStorage.setItem('cached_calendar_bookings', JSON.stringify(state.calendarBookings));
       } catch (e) {}
@@ -941,6 +955,18 @@ function fetchMyBookings(isSilent = false) {
     }
   } catch (e) {
     console.error("Error reading my bookings cache:", e);
+  }
+
+  // Fallback: If no cache, try to populate from state.calendarBookings (Zero-Loading optimization)
+  if (!hasCache && state.calendarBookings && state.calendarBookings.length > 0) {
+    if (state.currentUser && state.currentUser.email) {
+      const filtered = state.calendarBookings.filter(b => 
+        b.ownerEmail && b.ownerEmail.toLowerCase() === state.currentUser.email.toLowerCase()
+      );
+      state.myBookings = filtered;
+      filterMyBookings();
+      hasCache = true;
+    }
   }
 
   const silentMode = isSilent || hasCache;
