@@ -685,10 +685,14 @@ function fetchInitData(isSilent = false) {
 
     const roomSelect = document.getElementById('booking-form-room');
     if (roomSelect) {
+      const oldRoom = roomSelect.value;
       roomSelect.innerHTML = `<option value="">-- เลือกห้องไลฟ์ --</option>`;
       state.rooms.forEach(r => {
         roomSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.description})</option>`;
       });
+      if (oldRoom) {
+        roomSelect.value = oldRoom;
+      }
     }
 
     // Populate filter dropdowns
@@ -5596,6 +5600,7 @@ function populateFilterDropdowns() {
 function populateBookingFormBrands() {
   const brandSelect = document.getElementById('booking-form-brand');
   if (brandSelect) {
+    const oldVal = brandSelect.value;
     brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
     const filteredBrands = (state.brands || []).filter(b => {
       if (!state.currentUser) return false;
@@ -5605,6 +5610,9 @@ function populateBookingFormBrands() {
     filteredBrands.forEach(b => {
       brandSelect.innerHTML += `<option value="${b.name}">${b.name}</option>`;
     });
+    if (oldVal) {
+      brandSelect.value = oldVal;
+    }
   }
 }
 
