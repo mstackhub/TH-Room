@@ -2794,13 +2794,15 @@ function renderRoomsTable() {
 }
 
 function fetchRoomsAdmin(isSilent = false, forceReload = false) {
-  if (state.allRoomsAdmin && state.allRoomsAdmin.length > 0 && !forceReload) {
+  const hasData = state.allRoomsAdmin && state.allRoomsAdmin.length > 0;
+  
+  if (hasData && !forceReload) {
     renderRoomsTable();
     if (isSilent) return;
   }
 
   const tbody = document.getElementById('admin-rooms-table-body');
-  if (!isSilent) {
+  if (!isSilent && !hasData && tbody) {
     tbody.innerHTML = skTableRows(5, [
       { w: '12%' },   // ID
       { w: '22%' },   // ชื่อห้อง
@@ -3028,13 +3030,15 @@ function renderBrandsTable() {
 }
 
 function fetchBrandsAdmin(isSilent = false, forceReload = false) {
-  if (state.allBrandsAdmin && state.allBrandsAdmin.length > 0 && !forceReload) {
+  const hasData = state.allBrandsAdmin && state.allBrandsAdmin.length > 0;
+  
+  if (hasData && !forceReload) {
     renderBrandsTable();
     if (isSilent) return;
   }
 
   const tbody = document.getElementById('admin-brands-table-body');
-  if (!isSilent) {
+  if (!isSilent && !hasData && tbody) {
     tbody.innerHTML = skTableRows(5, [
       { w: '12%' },   // ID
       { w: '25%' },   // ชื่อแบรนด์
@@ -3491,13 +3495,15 @@ function renderUsersTable() {
 }
 
 function fetchUsersAdmin(isSilent = false, forceReload = false) {
-  if (state.allUsersAdmin && state.allUsersAdmin.length > 0 && !forceReload) {
+  const hasData = state.allUsersAdmin && state.allUsersAdmin.length > 0;
+  
+  if (hasData && !forceReload) {
     renderUsersTable();
     if (isSilent) return;
   }
 
   const tbody = document.getElementById('admin-users-table-body');
-  if (!isSilent) {
+  if (!isSilent && !hasData && tbody) {
     tbody.innerHTML = skTableRows(5, [
       { w: '22%' },   // อีเมล
       { w: '18%' },   // ชื่อ
