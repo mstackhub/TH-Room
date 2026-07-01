@@ -4985,52 +4985,74 @@ function renderDayView() {
   
   dayBookings.forEach(b => {
     const card = document.createElement('div');
-    card.className = "booking-day-row flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-md transition-all animate-in fade-in duration-200";
+    card.className = "booking-day-row flex flex-col md:flex-row gap-4 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 duration-300";
     
-    // Status border color
-    let borderClass = "border-l-blue-500 dark:border-l-blue-450";
+    // Status color configurations
+    let borderClass = "border-l-blue-500 dark:border-l-blue-500";
     let statusText = "อนุมัติแล้ว";
-    let statusBadgeColor = "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/25 dark:text-blue-300 dark:border-blue-800";
+    let statusBadgeColor = "bg-blue-50/60 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-350 dark:border-blue-900/50";
+    let statusDot = "bg-blue-500";
     
     if (b.status === "Pending") {
-      borderClass = "border-l-amber-500 dark:border-l-amber-450";
+      borderClass = "border-l-amber-500 dark:border-l-amber-500";
       statusText = "รอดำเนินการ";
-      statusBadgeColor = "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/25 dark:text-amber-300 dark:border-amber-800";
+      statusBadgeColor = "bg-amber-50/60 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-350 dark:border-amber-900/50";
+      statusDot = "bg-amber-500";
     } else if (b.status === "Completed") {
-      borderClass = "border-l-emerald-500 dark:border-l-emerald-450";
+      borderClass = "border-l-emerald-500 dark:border-l-emerald-500";
       statusText = "เสร็จสิ้น";
-      statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/25 dark:text-emerald-300 dark:border-emerald-800";
+      statusBadgeColor = "bg-emerald-50/60 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-350 dark:border-emerald-900/50";
+      statusDot = "bg-emerald-500";
     }
     
     card.className += ` border-l-4 ${borderClass}`;
     
     // Left: Time block
     const timeLeft = document.createElement('div');
-    timeLeft.className = "flex md:flex-col justify-between md:justify-center md:items-start shrink-0 pb-3 md:pb-0 md:pr-4 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-750 min-w-[130px] gap-1";
+    timeLeft.className = "flex md:flex-col justify-between md:justify-center md:items-start shrink-0 pb-3 md:pb-0 md:pr-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-805 min-w-[150px] gap-2";
     timeLeft.innerHTML = `
-      <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100 text-sm md:text-base">
-        <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
-        <span>${b.startTime} - ${b.endTime} น.</span>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">ช่วงเวลาไลฟ์</span>
+        <div class="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white text-base">
+          <i data-lucide="clock" class="w-4 h-4 text-slate-400 dark:text-slate-500"></i>
+          <span>${b.startTime} - ${b.endTime} น.</span>
+        </div>
       </div>
-      <div class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">ระยะเวลา: ${calculateDuration(b.startTime, b.endTime)}</div>
+      <div class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-850 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-800/50 self-start">
+        <i data-lucide="hourglass" class="w-3 h-3 text-slate-400"></i>
+        <span>ระยะเวลา: ${calculateDuration(b.startTime, b.endTime)}</span>
+      </div>
     `;
     card.appendChild(timeLeft);
     
     // Middle: Content block
     const contentMid = document.createElement('div');
-    contentMid.className = "flex-1 flex flex-col gap-1.5 text-left";
+    contentMid.className = "flex-1 flex flex-col gap-2 text-left justify-center";
     
     contentMid.innerHTML = `
       <div class="flex flex-wrap items-center gap-2">
-        <h3 class="text-sm font-bold text-slate-900 dark:text-white">${b.campaignName}</h3>
-        <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-750 dark:text-slate-350 text-[10px] font-bold rounded-full border border-slate-200 dark:border-slate-650">${b.roomName}</span>
+        <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">${b.campaignName}</h3>
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 text-[10px] font-bold rounded-full border border-slate-200 dark:border-slate-700">
+          <i data-lucide="video" class="w-3 h-3 text-slate-500"></i>
+          <span>${b.roomName}</span>
+        </span>
       </div>
-      <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">แบรนด์: <span class="text-slate-800 dark:text-slate-200 font-bold">${b.brandName}</span></div>
+      
+      <div class="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 dark:text-slate-455">
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="award" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>ลูกค้า/แบรนด์: <span class="font-bold text-slate-800 dark:text-slate-200">${b.brandName}</span></span>
+        </div>
+      </div>
     `;
     
     if (b.ownerName || b.ownerEmail) {
       const displayOwner = b.ownerName ? `${b.ownerName} (${b.ownerEmail})` : b.ownerEmail;
-      contentMid.innerHTML += `<div class="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-300 dark:text-slate-600"></i> ผู้สร้างจอง: ${displayOwner}</div>`;
+      contentMid.innerHTML += `
+        <div class="text-[10px] text-slate-455 dark:text-slate-500 flex items-center gap-1.5">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-slate-350 dark:text-slate-650"></i>
+          <span>ผู้สร้างจอง: <span class="font-medium text-slate-550 dark:text-slate-450">${displayOwner}</span></span>
+        </div>`;
     }
     
     // Drive links
@@ -5042,7 +5064,7 @@ function renderDayView() {
         const link = document.createElement('a');
         link.href = art.url;
         link.target = "_blank";
-        link.className = "px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-900/20 dark:text-brand-350 dark:hover:bg-brand-900/40 text-[9.5px] font-bold rounded-lg border border-brand-100 dark:border-brand-900/40 transition-all flex items-center gap-1";
+        link.className = "px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-350 dark:hover:bg-brand-900/30 text-[10px] font-bold rounded-lg border border-brand-100 dark:border-brand-900/30 transition-all flex items-center gap-1.5 shadow-sm";
         
         let iconName = "link";
         if (art.type === "Google Drive" || art.url.includes("drive.google.com")) {
@@ -5058,12 +5080,13 @@ function renderDayView() {
     
     // Right: Actions & Status
     const rightActions = document.createElement('div');
-    rightActions.className = "flex md:flex-col items-end justify-between md:justify-center shrink-0 gap-3 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-750 pt-3 md:pt-0 md:pl-4 min-w-[120px]";
+    rightActions.className = "flex md:flex-col items-end justify-between md:justify-center shrink-0 gap-3.5 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-3 md:pt-0 md:pl-5 min-w-[130px]";
     
     const badge = document.createElement('span');
-    badge.className = `px-2 py-0.5 text-xs font-bold rounded-full border ${statusBadgeColor}`;
-    badge.innerText = statusText;
+    badge.className = `inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-extrabold rounded-full border ${statusBadgeColor}`;
+    badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${statusDot}"></span> ${statusText}`;
     rightActions.appendChild(badge);
+    
     const btnGroup = document.createElement('div');
     btnGroup.className = "flex items-center gap-1.5";
     
@@ -5071,9 +5094,9 @@ function renderDayView() {
     
     if (!isViewer) {
       const dupBtn = document.createElement('button');
-      dupBtn.className = "p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 rounded-lg transition-all border border-slate-200 dark:border-slate-600";
+      dupBtn.className = "p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-355 rounded-xl border border-slate-200 dark:border-slate-700 transition-all";
       dupBtn.title = "ทำซ้ำรายการจอง";
-      dupBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i>`;
+      dupBtn.innerHTML = `<i data-lucide="copy" class="w-4 h-4"></i>`;
       dupBtn.onclick = (e) => {
         e.stopPropagation();
         duplicateBooking(b.id);
@@ -5083,12 +5106,12 @@ function renderDayView() {
     
     const editBtn = document.createElement('button');
     if (isViewer) {
-      editBtn.className = "px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-750 dark:text-slate-200 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 transition-all flex items-center gap-1";
+      editBtn.className = "px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5";
       editBtn.title = "ดูรายละเอียดการจอง";
-      editBtn.innerHTML = `<i data-lucide="eye" class="w-3.5 h-3.5"></i> รายละเอียด`;
+      editBtn.innerHTML = `<i data-lucide="eye" class="w-4 h-4"></i> รายละเอียด`;
     } else {
-      editBtn.className = "px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1";
-      editBtn.innerHTML = `<i data-lucide="edit-3" class="w-3.5 h-3.5"></i> แก้ไข`;
+      editBtn.className = "px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-brand-500/10 hover:shadow-md hover:shadow-brand-500/25 transition-all flex items-center gap-1.5";
+      editBtn.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4"></i> แก้ไข`;
     }
     editBtn.onclick = (e) => {
       e.stopPropagation();
