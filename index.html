@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Studio Booking System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind Configuration for custom styles -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          },
+          gridTemplateColumns: {
+            '24': 'repeat(24, minmax(0, 1fr))',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css?v=1.4.0">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- ==================== 1. LOGIN PAGE ==================== -->
+  <div id="login-page" class="hidden flex-1 flex flex-col justify-center items-center p-6 min-h-screen">
+    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-xl flex flex-col items-center">
+      <!-- Headings -->
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight text-center font-mono">Live Studio Booking</h1>
+      <p class="text-xs text-slate-500 mt-2 mb-6 text-center">ระบบบริหารจัดการห้องไลฟ์สดสำหรับทีม Campaign</p>
+      
+      <!-- Login Form -->
+      <form id="login-form" onsubmit="event.preventDefault(); handleCustomLogin();" class="w-full flex flex-col gap-4">
+        <div class="flex flex-col gap-1.5 w-full">
+          <label for="login-email" class="text-xs font-bold text-slate-500 uppercase tracking-wider">ชื่อผู้ใช้งาน (Username / Email)</label>
+          <input type="text" id="login-email" placeholder="กรอกอีเมล หรือ admin" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+        <div class="flex flex-col gap-1.5 w-full">
+          <label for="login-password" class="text-xs font-bold text-slate-500 uppercase tracking-wider">รหัสผ่าน (Password)</label>
+          <div class="relative">
+            <input type="password" id="login-password" placeholder="กรอกรหัสผ่าน" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 pr-10 bg-white">
+            <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+              <i data-lucide="eye" class="w-4 h-4 inline-block" id="eye-icon-login-password"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" id="login-submit-btn" class="w-full mt-2 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-1.5">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          เข้าสู่ระบบ
+        </button>
+      </form>
+
+      <!-- Developer/QA Settings for GAS URL -->
+      <div class="mt-8 pt-6 border-t border-slate-200 w-full text-center flex flex-col items-center gap-3">
+        <p class="text-xs text-slate-400">สำหรับจำลองระบบโดยไม่เชื่อมต่อจริง</p>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="mock-connect-real-gas" checked class="rounded text-brand-500 focus:ring-brand-500 cursor-pointer">
+          <label for="mock-connect-real-gas" class="text-xs text-slate-500 cursor-pointer select-none">เชื่อมต่อ Google Sheets & Drive จริง</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden flex-1 flex flex-col md:flex-row min-h-screen">
+    <!-- Dummy inputs to prevent browser autofill on search inputs -->
+    <input type="text" style="display:none;" autocomplete="username">
+    <input type="password" style="display:none;" autocomplete="current-password">
+    
+    <!-- Sidebar Navigation -->
+    <aside id="app-sidebar" class="bg-white border-r border-slate-200 w-[260px] flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out">
+      <!-- Sidebar Header (Logo/Title) -->
+      <div class="h-16 border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">Live Studio</h1>
+          <p class="text-[10px] text-slate-500 leading-none">Booking Management</p>
+        </div>
+        <!-- Close button on Mobile/Tablet -->
+        <button onclick="toggleSidebar(false)" class="p-1 hover:bg-slate-100 rounded-md md:hidden text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <!-- Sidebar Menu Items -->
+      <nav class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+        <!-- Group 1: Studio Booking -->
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1">Studio Booking</span>
+          <button onclick="switchTab('my-bookings')" id="tab-btn-my-bookings" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="user" class="w-4 h-4"></i>
+            การจองของฉัน (My Bookings)
+          </button>
+          <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="calendar-days" class="w-4 h-4"></i>
+            ปฏิทินรายเดือน (Calendar)
+          </button>
+          <!-- Hidden fallback scheduler tab button -->
+          <button onclick="switchTab('scheduler')" id="tab-btn-scheduler" class="hidden w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 text-left">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+            ตารางจองรวม (Scheduler)
+          </button>
+          <!-- Only for Master Admin -->
+          <button onclick="switchTab('campaign-schedule')" id="tab-btn-campaign-schedule" class="master-admin-only hidden w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+            ตารางงานไลฟ์ของแคมเปญ
+          </button>
+        </div>
+
+        <!-- Group 2: Insights -->
+        <div id="sidebar-group-insights" class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1">Insights</span>
+          <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+            รายงานสถิติ (Analytics)
+          </button>
+        </div>
+
+        <!-- Group 3: Administration (Admin Only) -->
+        <div class="admin-only hidden flex flex-col gap-1">
+          <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider px-3 mb-1">Administration</span>
+          <button onclick="switchTab('rooms')" id="tab-btn-rooms" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="door-open" class="w-4 h-4"></i>
+            จัดการห้องไลฟ์ (Rooms)
+          </button>
+          <button onclick="switchTab('brands')" id="tab-btn-brands" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="award" class="w-4 h-4"></i>
+            จัดการแบรนด์ (Brands)
+          </button>
+          <button onclick="switchTab('users')" id="tab-btn-users" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            สิทธิ์ผู้ใช้งาน (Users)
+          </button>
+          <button onclick="switchTab('roles-mgmt')" id="tab-btn-roles-mgmt" class="master-admin-only hidden w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            กำหนดระดับสิทธิ์ (Roles)
+          </button>
+          <button onclick="switchTab('audit-log')" id="tab-btn-audit-log" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            ประวัติกิจกรรม (Audit Log)
+          </button>
+          <button onclick="switchTab('settings')" id="tab-btn-settings" class="w-full px-3 py-2 rounded-lg font-semibold text-sm flex items-center gap-2.5 transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            ตั้งค่าระบบ (Settings)
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Sidebar Backdrop for Mobile/Tablet -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-45 md:hidden"></div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col md:pl-[260px] min-h-screen">
+      
+      <!-- Topbar Header -->
+      <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div class="w-full px-4 lg:px-8 h-16 flex items-center justify-between">
+          <!-- Mobile Menu Toggle button -->
+          <button onclick="toggleSidebar(true)" class="p-2 hover:bg-slate-100 rounded-lg md:hidden text-slate-500 hover:text-slate-900 mr-2 flex items-center justify-center" title="เปิดเมนู">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          
+          <div class="hidden md:block"></div>
+
+          <!-- User Information & Logout -->
+          <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+              <div class="text-sm font-semibold text-slate-900" id="user-display-name">Guest User</div>
+              <div class="text-xs font-medium text-slate-500 flex items-center gap-1 justify-end">
+                <span id="user-display-role" class="px-2 py-0.5 bg-slate-100 rounded text-[10px] uppercase font-bold text-slate-600">Viewer</span>
+                <span id="user-display-email" class="text-[11px]">user@company.com</span>
+              </div>
+            </div>
+            <!-- Avatar -->
+            <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-600 text-sm font-bold shadow-inner" id="user-avatar-container">
+              U
+            </div>
+            <!-- Dark Mode Toggle -->
+            <button onclick="toggleDarkMode()" id="dark-mode-btn" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-all" title="สลับโหมด มืด/สว่าง">
+              <i data-lucide="moon" class="w-5 h-5"></i>
+            </button>
+            <!-- Logout Button -->
+            <button onclick="handleLogout()" class="p-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-600 rounded-lg transition-all" title="ออกจากระบบ">
+              <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Outer Wrapper -->
+      <div class="w-full max-w-[1600px] mx-auto px-4 lg:px-8 py-6 flex-1 flex flex-col gap-6">
+        
+        <!-- KPI DASHBOARD SECTION -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-section">
+          <!-- KPI 1 -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-brand-50 text-brand-600 rounded-xl">
+              <i data-lucide="calendar-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" id="kpi-label-today">Booking Today</div>
+              <div class="text-2xl font-bold text-slate-950 mt-0.5" id="kpi-booking-today">-</div>
+            </div>
+          </div>
+          <!-- KPI 2 -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+              <i data-lucide="radio" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" id="kpi-label-active">Active Rooms</div>
+              <div class="text-2xl font-bold text-slate-950 mt-0.5" id="kpi-active-rooms">-</div>
+              <div class="text-[10px] text-emerald-600 font-bold mt-0.5 hidden" id="kpi-active-rooms-list"></div>
+            </div>
+          </div>
+          <!-- KPI 3 -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-slate-50 text-slate-500 rounded-xl">
+              <i data-lucide="door-open" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Available Rooms</div>
+              <div class="text-2xl font-bold text-slate-950 mt-0.5" id="kpi-available-rooms">-</div>
+            </div>
+          </div>
+          <!-- KPI 4 -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+              <i data-lucide="clock" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" id="kpi-label-upcoming">Upcoming Booking</div>
+              <div class="text-2xl font-bold text-slate-950 mt-0.5" id="kpi-upcoming-bookings">-</div>
+              <div class="text-[10px] text-amber-600 font-bold mt-0.5 hidden" id="kpi-upcoming-bookings-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== TABS CONTENT ==================== -->
+        <main class="flex-1 flex flex-col">
+        
+        <!-- A. TIMELINE SCHEDULER TAB -->
+        <div id="tab-scheduler" class="tab-pane flex flex-col gap-4">
+          <!-- Filter & Navigation bar -->
+          <div class="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            
+            <!-- Date controls -->
+            <div class="flex items-center gap-2">
+              <button onclick="shiftDate(-1)" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 border border-slate-200 transition-all">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <button onclick="setTodayDate()" class="px-3 py-1.5 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200 transition-all">
+                วันนี้
+              </button>
+              <button onclick="shiftDate(1)" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 border border-slate-200 transition-all">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+              
+              <!-- Date Display & Calendar Trigger -->
+              <div class="relative flex items-center ml-2 border border-slate-200 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-brand-500 bg-white">
+                <i data-lucide="calendar" class="w-4 h-4 text-slate-400 mr-2"></i>
+                <input type="date" id="scheduler-date-picker" onchange="handleDatePickerChange(this.value)" class="text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer">
+              </div>
+            </div>
+
+            <!-- Booking Filter Controls -->
+            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <div class="relative flex-1 sm:w-64">
+                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                <input type="search" id="scheduler-search" placeholder="ค้นหาแคมเปญ / แบรนด์..." oninput="handleSchedulerSearch(this.value)" class="w-full text-sm pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" autocomplete="off">
+              </div>
+              <button onclick="openBookingModal()" id="btn-create-booking" class="write-only hidden px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                จองห้องไลฟ์
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-semibold">
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-brand-500"></i>
+                <span>ตัวกรอง:</span>
+              </div>
+              <!-- Room Filter -->
+              <select id="scheduler-filter-room" onchange="handleFilterChange('room', this.value)" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 dark:text-slate-200 font-medium">
+                <option value="">ทุกห้องสตูดิโอ</option>
+              </select>
+              <!-- Brand Filter -->
+              <select id="scheduler-filter-brand" onchange="handleFilterChange('brand', this.value)" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 dark:text-slate-200 font-medium">
+                <option value="">ทุกแบรนด์</option>
+              </select>
+              <!-- Action Filter -->
+              <select id="scheduler-filter-action" onchange="handleFilterActionChange(this.value)" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 dark:text-slate-200 font-medium">
+                <option value="all">ทั้งหมด (All Rooms)</option>
+                <option value="booking">Booking (เฉพาะห้องที่มีการจอง)</option>
+                <option value="active">Active Rooms (เฉพาะห้องที่กำลังไลฟ์)</option>
+              </select>
+            </div>
+            <!-- Stats Badges & Clear Filters -->
+            <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <button onclick="clearAllFilters()" id="scheduler-clear-filters-btn" class="hidden text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition-all flex items-center gap-1">
+                <i data-lucide="x" class="w-3 h-3"></i> ล้างตัวกรอง
+              </button>
+            </div>
+          </div>
+
+          <!-- Timeline Grid container -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <!-- Timeline Legend -->
+            <div class="bg-slate-50 border-b border-slate-200 p-3 px-4 flex items-center justify-between text-xs text-slate-500">
+              <div class="flex items-center gap-1">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+                <span>คลิกช่องว่างเพื่อสร้างการจองใหม่ หรือคลิกที่แบรนด์เพื่อแก้ไข/ตรวจสอบรายละเอียด</span>
+              </div>
+              <div class="flex gap-4">
+                <span class="flex items-center gap-1.5 font-medium"><span class="w-2.5 h-2.5 bg-slate-200 rounded-sm"></span> ว่าง</span>
+                <span class="flex items-center gap-1.5 font-medium"><span class="w-2.5 h-2.5 bg-brand-500 rounded-sm"></span> จองแล้ว</span>
+                <span class="flex items-center gap-1.5 font-medium"><span class="w-2.5 h-2.5 bg-emerald-500 rounded-sm"></span> เสร็จสิ้น</span>
+                <span class="flex items-center gap-1.5 font-medium"><span class="w-2.5 h-2.5 bg-rose-500 rounded-sm"></span> ยกเลิก</span>
+              </div>
+            </div>
+            
+            <!-- Real Scheduler Component -->
+            <div class="scheduler-container">
+              <!-- Left Rooms Column -->
+              <div class="scheduler-rooms-col flex flex-col" id="scheduler-rooms-list">
+                <div class="h-10 border-b border-slate-200 bg-slate-50/50 flex items-center px-4 font-bold text-xs text-slate-500 uppercase tracking-wider">ห้องไลฟ์ (Rooms)</div>
+                <!-- Seeded / Rendered Dynamically -->
+              </div>
+              
+              <!-- Right Timeline Grid Column -->
+              <div class="scheduler-timeline-col flex flex-col" id="scheduler-timeline-scroll">
+                <!-- Hours Header Row (Sticky top) -->
+                <div class="flex h-10 border-b border-slate-200 bg-slate-50/50" id="scheduler-timeline-hours">
+                  <!-- Generated Dynamically -->
+                </div>
+                <!-- Bookings Grid -->
+                <div class="flex flex-col relative" id="scheduler-grid-rows">
+                  <!-- Generated Dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- B. MY BOOKINGS TAB -->
+        <div id="tab-my-bookings" class="tab-pane active flex flex-col gap-4">
+          <!-- Search and filters -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div class="relative w-full sm:w-72">
+              <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+              <input type="search" id="my-bookings-search" placeholder="ค้นหาแคมเปญ / แบรนด์..." oninput="filterMyBookings()" class="w-full text-sm pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" autocomplete="off">
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto items-center">
+              <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <input type="date" id="my-bookings-filter-start-date" onchange="filterMyBookings()" class="text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer w-[125px] sm:w-[135px]">
+                <span class="text-slate-400 text-xs font-semibold">ถึง</span>
+                <input type="date" id="my-bookings-filter-end-date" onchange="filterMyBookings()" class="text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer w-[125px] sm:w-[135px]">
+              </div>
+              <button onclick="clearMyBookingsDateFilter()" class="p-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-500 text-sm font-semibold transition-all flex items-center justify-center h-[38px] shrink-0" title="แสดงทุกวัน">
+                <i data-lucide="calendar-x" class="w-4 h-4"></i>
+              </button>
+              <select id="my-bookings-filter-status" onchange="filterMyBookings()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 sm:flex-none">
+                <option value="All">ทุกสถานะ</option>
+                <option value="Confirmed">Confirmed (จองแล้ว)</option>
+                <option value="Completed">Completed (เสร็จสิ้น)</option>
+                <option value="Cancelled">Cancelled (ยกเลิก)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- My Bookings Table -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[1000px] text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <th class="p-4 cursor-pointer hover:bg-slate-100 select-none w-[15%]" onclick="toggleMyBookingsSort()" title="คลิกเพื่อเรียงลำดับเวลา">
+                      วันที่ / เวลา <span id="sort-icon-my-bookings" class="inline-block ml-1 text-slate-400">▼</span>
+                    </th>
+                    <th class="p-4 w-[8%]">ห้อง</th>
+                    <th class="p-4 w-[15%]">แบรนด์ / แคมเปญ</th>
+                    <th class="p-4 w-[22%]">รายละเอียด</th>
+                    <th class="p-4 w-[12%]">ลิงก์</th>
+                    <th class="p-4 w-[10%]">ผู้จอง</th>
+                    <th class="p-4 w-[13%]">สถานะรายการ</th>
+                    <th class="p-4 text-right w-[5%]">ดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody id="my-bookings-table-body" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="8" class="p-8 text-center text-slate-400">
+                      <div class="flex flex-col items-center gap-2">
+                        <i data-lucide="inbox" class="w-8 h-8 text-slate-300"></i>
+                        <span>ไม่พบรายการจองของคุณ</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. ROOMS ADMIN TAB -->
+        <div id="tab-rooms" class="tab-pane flex flex-col gap-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-bold text-slate-900">จัดการห้องไลฟ์ทั้งหมด (Studio Rooms)</h2>
+            <button onclick="openRoomModal()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              เพิ่มห้องใหม่
+            </button>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[650px] text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <th class="p-4">ID</th>
+                    <th class="p-4">ชื่อห้อง (Room Name)</th>
+                    <th class="p-4">ความจุ (Capacity)</th>
+                    <th class="p-4">รายละเอียด</th>
+                    <th class="p-4 text-center">สถานะ</th>
+                    <th class="p-4 text-right">ดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-rooms-table-body" class="divide-y divide-slate-100">
+                  <!-- Dynamically Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- D. BRANDS ADMIN TAB -->
+        <div id="tab-brands" class="tab-pane flex flex-col gap-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-bold text-slate-900">จัดการแบรนด์ลูกค้า (Brand Customers)</h2>
+            <button onclick="openBrandModal()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              เพิ่มแบรนด์ใหม่
+            </button>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[500px] text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <th class="p-4">ID</th>
+                    <th class="p-4">ชื่อแบรนด์ (Brand Name)</th>
+                    <th class="p-4">ผู้ดูแลแบรนด์ (ชื่อทีมงาน)</th>
+                    <th class="p-4 text-center">สถานะ</th>
+                    <th class="p-4 text-right">ดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-brands-table-body" class="divide-y divide-slate-100">
+                  <!-- Dynamically Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- E. USERS ADMIN TAB -->
+        <div id="tab-users" class="tab-pane flex flex-col gap-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-bold text-slate-900">การกำหนดสิทธิ์ผู้ใช้งาน (User Management)</h2>
+            <button onclick="openUserModal()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              เพิ่มผู้ใช้สิทธิ์ใหม่
+            </button>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[700px] text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <th class="p-4">ชื่อผู้ใช้งาน (Username)</th>
+                    <th class="p-4">รหัสผ่าน (Password)</th>
+                    <th class="p-4">ชื่อทีมงาน</th>
+                    <th class="p-4">ระดับสิทธิ์ (Role)</th>
+                    <th class="p-4 text-center">สถานะการใช้งาน</th>
+                    <th class="p-4 text-right">ดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-table-body" class="divide-y divide-slate-100">
+                  <!-- Dynamically Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- H. ROLES ADMIN TAB -->
+        <div id="tab-roles-mgmt" class="tab-pane flex flex-col gap-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-bold text-slate-900">กำหนดสิทธิ์บทบาทและสิทธิ์พื้นฐาน (Roles Management)</h2>
+            <button onclick="openRoleModal()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              เพิ่มบทบาทผู้ใช้ใหม่ (New Role)
+            </button>
+          </div>
+          
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[800px] text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <th class="p-4">ชื่อบทบาท (Role Name)</th>
+                    <th class="p-4">คำอธิบาย</th>
+                    <th class="p-4 text-center">สิทธิ์การจองห้อง (Create/Edit/Cancel)</th>
+                    <th class="p-4 text-center">เป็นผู้ดูแลสูงสุด (Is Admin)</th>
+                    <th class="p-4">แท็บที่เข้าถึงได้ (Allowed Tabs)</th>
+                    <th class="p-4 text-right">ดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-roles-table-body" class="divide-y divide-slate-100">
+                  <!-- Dynamically Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- F. AUDIT LOG ADMIN TAB -->
+        <div id="tab-audit-log" class="tab-pane flex flex-col gap-4">
+          
+          <!-- Master Password Prompt (Shown if not unlocked) -->
+          <div id="audit-log-locked-pane" class="bg-white border border-slate-200 shadow-sm rounded-xl p-12 flex flex-col items-center justify-center max-w-md mx-auto mt-10">
+            <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mb-4">
+              <i data-lucide="lock" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">กรุณาใส่รหัสผ่าน Master Password</h3>
+            <p class="text-xs text-slate-400 mb-6 text-center">หน้าประวัติกิจกรรมเป็นข้อมูลความปลอดภัยระดับสูงสุด จำเป็นต้องกรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
+            <div class="w-full flex flex-col gap-3">
+              <input type="password" id="audit-master-password-input" placeholder="รหัสผ่าน Master Password" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <button onclick="unlockAuditLog()" class="w-full px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold transition-all">
+                ยืนยันเพื่อเข้าถึง
+              </button>
+            </div>
+          </div>
+
+          <!-- Real Audit Log Content (Hidden until unlocked) -->
+          <div id="audit-log-content-pane" class="hidden flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div>
+                <h2 class="text-base font-bold text-slate-900">บันทึกกิจกรรมความเคลื่อนไหว (Activity Audit Trail)</h2>
+                <p class="text-xs text-slate-400 mt-0.5">บันทึกการกระทำทุกประเภทเพื่อตรวจสอบย้อนหลังย้อนเวลารายการแก้ไข</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="exportAuditLogs()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-all flex items-center gap-1.5">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+                </button>
+                <button onclick="triggerManualBackup()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-all flex items-center gap-1.5">
+                  <i data-lucide="save" class="w-3.5 h-3.5"></i> Backup ด่วน
+                </button>
+                <button onclick="triggerManualArchive()" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg border border-amber-200 transition-all flex items-center gap-1.5">
+                  <i data-lucide="archive" class="w-3.5 h-3.5"></i> ย้ายเก็บถาวรปีนี้ (Archive)
+                </button>
+                <button onclick="openChangePasswordModal()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5">
+                  <i data-lucide="key" class="w-3.5 h-3.5"></i> เปลี่ยน Master Password
+                </button>
+              </div>
+            </div>
+
+            <!-- Logs Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="overflow-x-auto max-h-[500px]">
+                <table class="w-full min-w-[1000px] text-left border-collapse text-sm table-fixed">
+                  <thead class="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+                    <tr class="text-slate-500 font-semibold text-xs">
+                      <th class="p-3 cursor-pointer hover:bg-slate-100 select-none w-[13%]" onclick="toggleAuditLogsSort()" title="คลิกเพื่อเรียงลำดับเวลา">
+                        วันเวลา (Date Time) <span id="sort-icon-audit-logs" class="inline-block ml-1 text-slate-400">▼</span>
+                      </th>
+                      <th class="p-3 w-[14%]">ผู้กระทำ (User)</th>
+                      <th class="p-3 w-[11%]">กิจกรรม (Action)</th>
+                      <th class="p-3 w-[23%]">ค่าเริ่มต้น (Before)</th>
+                      <th class="p-3 w-[23%]">หลังการแก้ไข (After)</th>
+                      <th class="p-3 w-[8%]">IP Address</th>
+                      <th class="p-3 w-[8%]">อุปกรณ์ (Device)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-logs-table-body" class="divide-y divide-slate-100">
+                    <!-- Dynamically Loaded -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- G. LINE SETTINGS TAB -->
+        <div id="tab-settings" class="tab-pane flex flex-col gap-4">
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto mt-6 w-full">
+            <div class="flex items-center gap-2 mb-6">
+              <div class="p-2 bg-brand-550 text-white rounded-lg" style="background-color: #06C755;">
+                <i data-lucide="bell" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-slate-900">ตั้งค่าการแจ้งเตือน LINE Messaging API</h2>
+                <p class="text-xs text-slate-500">เชื่อมต่อกับระบบ LINE Official Account เพื่อส่งการแจ้งเตือนคิวงานจัดจองสตูดิโอแบบเรียลไทม์</p>
+              </div>
+            </div>
+            
+            <form id="settings-form" onsubmit="event.preventDefault(); saveSettings();" class="flex flex-col gap-5">
+              <!-- Switch toggle -->
+              <div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
+                <div>
+                  <label for="settings-line-enabled" class="text-sm font-semibold text-slate-900 block">เปิดใช้งานการแจ้งเตือน LINE</label>
+                  <span class="text-xs text-slate-500">ระบบจะจัดส่ง Flex Message สวยงามเมื่อมีการสร้าง แก้ไข หรือยกเลิกการจอง</span>
+                </div>
+                <label for="settings-line-enabled" class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="settings-line-enabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                </label>
+              </div>
+
+              <!-- Channel Access Token -->
+              <div class="flex flex-col gap-1.5">
+                <label for="settings-line-token" class="text-xs font-bold text-slate-700 uppercase tracking-wider">LINE Channel Access Token</label>
+                <div class="relative">
+                  <input type="password" id="settings-line-token" placeholder="ใส่ LINE Long-Lived Channel Access Token ที่นี่" class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 pr-10">
+                  <button type="button" onclick="togglePasswordVisibility('settings-line-token')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                    <i data-lucide="eye" class="w-4 h-4 inline-block" id="eye-icon-settings-line-token"></i>
+                  </button>
+                </div>
+                <span class="text-[10px] text-slate-400">คัดลอกจาก LINE Developers Console &gt; Messaging API &gt; Channel access token (long-lived)</span>
+              </div>
+
+              <!-- Destination ID -->
+              <div class="flex flex-col gap-1.5">
+                <label for="settings-line-dest" class="text-xs font-bold text-slate-700 uppercase tracking-wider">LINE Group / Destination ID</label>
+                <input type="text" id="settings-line-dest" placeholder="เช่น U11b2d1a... หรือ Ca1a2b3c..." class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <span class="text-[10px] text-slate-400">ใส่ ID ของผู้รับ (User ID) หรือกลุ่ม (Group ID) ที่ต้องการให้ยิงแจ้งเตือนเข้าไป</span>
+              </div>
+
+              <!-- Frontend URL -->
+              <div class="flex flex-col gap-1.5">
+                <label for="settings-frontend-url" class="text-xs font-bold text-slate-700 uppercase tracking-wider">ลิงก์หน้าเว็บหลัก (Frontend URL)</label>
+                <input type="url" id="settings-frontend-url" placeholder="เช่น https://xxxx.netlify.app" class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <span class="text-[10px] text-slate-400">ใส่ URL ของหน้าเว็บที่ผู้ใช้ทั่วไปใช้เข้าระบบ เพื่อส่งในปุ่ม LINE Flex Message</span>
+              </div>
+
+              <!-- How to get Group ID instructions -->
+              <div class="bg-blue-50/60 border border-blue-100 rounded-lg p-4 flex gap-3 text-xs text-blue-800">
+                <i data-lucide="info" class="w-4.5 h-4.5 text-blue-600 flex-shrink-0 mt-0.5"></i>
+                <div class="flex flex-col gap-1">
+                  <span class="font-bold">💡 วิธีการดึง Group ID หรือ User ID:</span>
+                  <ol class="list-decimal pl-4 space-y-1 mt-1 text-blue-800/95">
+                    <li>เชิญ Line Bot หรือ Line OA ของคุณเข้ากลุ่ม LINE หรือ แชทส่วนตัว</li>
+                    <li>พิมพ์ข้อความ <code class="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold text-blue-900">ขอไอดีกลุ่ม</code> หรือ <code class="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold text-blue-900">ขอไอดี</code> ในห้องแชทนั้น</li>
+                    <li>บอทจะตอบกลับเป็นรหัส ID (เช่น <code class="bg-blue-100/80 px-1 py-0.5 rounded font-mono text-blue-900">C1a2b3...</code> หรือ <code class="bg-blue-100/80 px-1 py-0.5 rounded font-mono text-blue-900">U11b2...</code>) ให้นำค่านั้นมาวางด้านบน</li>
+                  </ol>
+                </div>
+              </div>
+
+              <!-- Save button -->
+              <div class="flex justify-end gap-3 mt-2">
+                <button type="submit" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/25 transition-all flex items-center gap-1.5">
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  บันทึกการตั้งค่า
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- G. MONTHLY CALENDAR TAB -->
+        <div id="tab-calendar" class="tab-pane flex flex-col gap-4">
+          <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="calendar" class="w-5 h-5 text-brand-500"></i>
+                <span id="calendar-month-year-display">มิถุนายน 2569</span>
+              </h2>
+              <p id="calendar-subtitle-display" class="text-xs text-slate-400 mt-0.5">ภาพรวมการจองแต่ละวันในมุมมองปฏิทินรายเดือน คลิกช่องเพื่อเปิดตารางเวลาวันนั้นๆ</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- View Switcher -->
+              <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                <button id="calendar-view-month-btn" onclick="setCalendarViewMode('month')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm">
+                  รายเดือน
+                </button>
+                <button id="calendar-view-week-btn" onclick="setCalendarViewMode('week')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                  รายสัปดาห์
+                </button>
+                <button id="calendar-view-day-btn" onclick="setCalendarViewMode('day')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                  รายวัน
+                </button>
+              </div>
+
+              <!-- Navigation Group -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="navigateCalendar(-1)" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 border border-slate-200 dark:border-slate-700 transition-all">
+                  <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <button id="calendar-today-btn" onclick="navigateCalendarToday()" class="px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all">
+                  เดือนนี้
+                </button>
+                <button onclick="navigateCalendar(1)" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 border border-slate-200 dark:border-slate-700 transition-all">
+                  <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-semibold">
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-brand-500"></i>
+                <span>ตัวกรอง:</span>
+              </div>
+              <!-- Room Filter -->
+              <select id="calendar-filter-room" onchange="handleFilterChange('room', this.value)" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 dark:text-slate-200 font-medium">
+                <option value="">ทุกห้องสตูดิโอ</option>
+              </select>
+              <!-- Brand Filter -->
+              <select id="calendar-filter-brand" onchange="handleFilterChange('brand', this.value)" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 dark:text-slate-200 font-medium">
+                <option value="">ทุกแบรนด์</option>
+              </select>
+            </div>
+            <!-- Stats Badges & Clear Filters -->
+            <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <span class="inline-flex items-center gap-1 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-2.5 py-1 rounded-md text-[11px] font-bold border border-brand-100 dark:border-brand-900/50">
+                <i data-lucide="calendar" class="w-3 h-3 text-brand-500"></i>
+                Booking วันนี้: <span id="calendar-today-bookings-kpi" class="font-extrabold ml-1">-</span>
+              </span>
+              <span class="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-md text-[11px] font-bold border border-emerald-100 dark:border-emerald-900/50">
+                <i data-lucide="video" class="w-3 h-3 text-emerald-500 animate-pulse"></i>
+                Active Rooms: <span id="calendar-active-rooms-kpi" class="font-extrabold ml-1">-</span>
+              </span>
+              <button onclick="clearAllFilters()" id="calendar-clear-filters-btn" class="hidden text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition-all flex items-center gap-1">
+                <i data-lucide="x" class="w-3 h-3"></i> ล้างตัวกรอง
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendar Grid Container -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-hidden">
+            <!-- Day of week headers -->
+            <div id="calendar-days-header" class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+              <div class="text-rose-500">อา.</div>
+              <div>จ.</div>
+              <div>อ.</div>
+              <div>พ.</div>
+              <div>พฤ.</div>
+              <div>ศ.</div>
+              <div class="text-blue-500">ส.</div>
+            </div>
+            <!-- Dynamic days grid -->
+            <div id="calendar-grid" class="grid grid-cols-7 gap-2 min-h-[420px]">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+          
+          <!-- Daily Schedule Detail Drawer/List for selected day (mainly for Mobile) -->
+          <div id="calendar-daily-detail-container" class="mt-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hidden">
+            <h4 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-3">
+              <i data-lucide="calendar-range" class="w-4 h-4 text-brand-500"></i>
+              <span>รายการคิวจองวันที่ <span id="calendar-daily-detail-date-label">-</span></span>
+            </h4>
+            <div id="calendar-daily-detail-list" class="flex flex-col gap-3">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- H. ANALYTICS DASHBOARD TAB -->
+        <div id="tab-analytics" class="tab-pane flex flex-col gap-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-500"></i>
+                รายงานสถิติการใช้งานห้องไลฟ์สด (Studio Analytics)
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">วิเคราะห์สถิติจำนวนชั่วโมงไลฟ์ ยอดจองห้อง และช่วงเวลายอดนิยม</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+              <!-- Custom Date Range Picker -->
+              <div class="flex items-center gap-2">
+                <div class="relative flex items-center border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                  <label for="analytics-start-date" class="text-[10px] font-bold text-slate-400 mr-1.5 uppercase">เริ่ม</label>
+                  <input type="date" id="analytics-start-date" onchange="handleAnalyticsDateChange()" class="text-xs font-semibold bg-transparent focus:outline-none cursor-pointer">
+                </div>
+                <span class="text-slate-400 text-xs">ถึง</span>
+                <div class="relative flex items-center border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                  <label for="analytics-end-date" class="text-[10px] font-bold text-slate-400 mr-1.5 uppercase">สิ้นสุด</label>
+                  <input type="date" id="analytics-end-date" onchange="handleAnalyticsDateChange()" class="text-xs font-semibold bg-transparent focus:outline-none cursor-pointer">
+                </div>
+              </div>
+              <button onclick="loadAnalyticsView(false)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-600 transition-all flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> รีเฟรชสถิติ
+              </button>
+            </div>
+          </div>
+
+          <!-- Analytics charts grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Room utilization -->
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+              <div class="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <i data-lucide="door-open" class="w-5 h-5 text-brand-500"></i>
+                <h3 class="font-bold text-slate-800 dark:text-slate-100">อัตราการใช้งานห้อง (Room Utilization Rate)</h3>
+              </div>
+              <div id="analytics-room-utilization" class="flex flex-col gap-4 py-2">
+                <!-- Dynamically populated room rows -->
+              </div>
+            </div>
+
+            <!-- Brand Leaderboard -->
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+              <div class="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <i data-lucide="award" class="w-5 h-5 text-amber-500"></i>
+                <h3 class="font-bold text-slate-800 dark:text-slate-100">แบรนด์ที่จองชั่วโมงสูงสุด (Top Brands by Booked Hours)</h3>
+              </div>
+              <div id="analytics-brand-leaderboard" class="flex flex-col gap-3 py-2">
+                <!-- Dynamically populated brand rank rows -->
+              </div>
+            </div>
+
+            <!-- Peak Hours Graph (Heatmap) -->
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4 lg:col-span-2">
+              <div class="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <i data-lucide="grid" class="w-5 h-5 text-indigo-500"></i>
+                <h3 class="font-bold text-slate-800 dark:text-slate-100">ความหนาแน่นของการจองตามวันและเวลา (Weekly Live Booking Heatmap)</h3>
+              </div>
+              <!-- Visual Heatmap Chart -->
+              <div class="w-full overflow-x-auto py-2">
+                <div id="analytics-peak-hours" class="min-w-[850px] flex flex-col gap-1.5 text-[11px]">
+                  <!-- Generated dynamically via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- H. CAMPAIGN LIVE SCHEDULE TAB (MASTER ADMIN ONLY) -->
+        <div id="tab-campaign-schedule" class="tab-pane flex flex-col gap-4">
+          <!-- Title & Header -->
+          <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <i data-lucide="clipboard-list" class="w-5.5 h-5.5 text-brand-600"></i>
+              ตารางงานไลฟ์ของแคมเปญ
+            </h2>
+            <p class="text-xs text-slate-500">สำหรับหัวหน้างาน (Master Admin) และผู้ดูแลระบบ (Admin) ในการตรวจสอบรายละเอียดคิวไลฟ์สดของแคมเปญทั้งหมด</p>
+          </div>
+
+          <!-- Filters Card -->
+          <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+            <!-- First Row: Date filters -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+              <!-- Start Date -->
+              <div class="flex flex-col gap-1.5">
+                <label for="campaign-schedule-start-date" class="text-xs font-semibold text-slate-600 dark:text-slate-400">วันที่เริ่มต้น (Start Date)</label>
+                <input type="date" id="campaign-schedule-start-date" onchange="filterCampaignSchedule()" class="text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full">
+              </div>
+              <!-- End Date -->
+              <div class="flex flex-col gap-1.5">
+                <label for="campaign-schedule-end-date" class="text-xs font-semibold text-slate-600 dark:text-slate-400">วันที่สิ้นสุด (End Date)</label>
+                <input type="date" id="campaign-schedule-end-date" onchange="filterCampaignSchedule()" class="text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full">
+              </div>
+              <!-- All Dates Toggle -->
+              <div class="flex items-center h-10">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" id="campaign-schedule-all-dates" onchange="toggleCampaignScheduleAllDates()" class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                  <span class="text-sm text-slate-700 dark:text-slate-300">แสดงทุกวัน (All Dates)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Second Row: Advanced Filters & Sorting -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <!-- Filter by Brand -->
+              <div class="flex flex-col gap-1.5">
+                <label for="campaign-schedule-filter-brand" class="text-xs font-semibold text-slate-600 dark:text-slate-400">แบรนด์ที่มีการไลฟ์ (Active Brands)</label>
+                <select id="campaign-schedule-filter-brand" onchange="filterCampaignSchedule()" class="text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full">
+                  <option value="All">ทุกแบรนด์ (All)</option>
+                </select>
+              </div>
+              <!-- Filter by Owner -->
+              <div class="flex flex-col gap-1.5">
+                <label for="campaign-schedule-filter-owner" class="text-xs font-semibold text-slate-600 dark:text-slate-400">ผู้จอง (Owner)</label>
+                <select id="campaign-schedule-filter-owner" onchange="filterCampaignSchedule()" class="text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full">
+                  <option value="All">ผู้จองทั้งหมด (All)</option>
+                </select>
+              </div>
+              <!-- Live Status Category (Active Now, Today, Upcoming) -->
+              <div class="flex flex-col gap-1.5">
+                <label for="campaign-schedule-filter-status" class="text-xs font-semibold text-slate-600 dark:text-slate-400">สถานะแคมเปญ (Campaign Status)</label>
+                <select id="campaign-schedule-filter-status" onchange="filterCampaignSchedule()" class="text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full">
+                  <option value="All">ทุกคิวจอง</option>
+                  <option value="ActiveNow">🔴 กำลังไลฟ์อยู่ (Active Now)</option>
+                  <option value="BookingToday">📅 จองวันนี้ (Booking Today)</option>
+                  <option value="Upcoming">⏳ กำลังจะมาถึง (Upcoming)</option>
+                  <option value="Upcoming1Hour">⏳ กำลังจะมาถึง (เหลือเวลา 1 ชม.)</option>
+                </select>
+              </div>
+              <!-- Sorting Options -->
+              <div class="flex flex-col gap-1.5">
+                <label for="campaign-schedule-sort" class="text-xs font-semibold text-slate-600 dark:text-slate-400">การจัดเรียงลำดับ (Sorting)</label>
+                <select id="campaign-schedule-sort" onchange="filterCampaignSchedule()" class="text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full">
+                  <option value="created_asc">เวลาจอง: เก่าไปใหม่ (Oldest first)</option>
+                  <option value="created_desc">เวลาจอง: ใหม่ไปเก่า (Newest first)</option>
+                  <option value="room_hours_desc">ชั่วโมงไลฟ์สะสมของห้อง: สูงไปต่ำ (Room Hours: High to Low)</option>
+                  <option value="room_hours_asc">ชั่วโมงไลฟ์สะสมของห้อง: ต่ำไปสูง (Room Hours: Low to High)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Room Cumulative Hours Summary Card Section -->
+          <div class="hidden bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="door-open" class="w-4 h-4 text-brand-500"></i>
+              ชั่วโมงไลฟ์สะสมแยกตามห้องในวันที่เลือก (Cumulative Live Hours by Room)
+            </h3>
+            <div id="campaign-schedule-room-summary" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- Bookings Table Card -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[1000px] text-left border-collapse text-sm">
+                <thead>
+                  <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
+                    <th class="p-4 w-[15%]">วันที่ / เวลา</th>
+                    <th class="p-4 w-[12%]">ห้อง</th>
+                    <th class="p-4 w-[12%]">ชั่วโมงไลฟ์สะสมห้อง</th>
+                    <th class="p-4 w-[18%]">แบรนด์ / แคมเปญ</th>
+                    <th class="p-4 w-[20%]">รายละเอียด</th>
+                    <th class="p-4 w-[13%]">ผู้จอง (Owner)</th>
+                    <th class="p-4 w-[10%]">สถานะรายการ</th>
+                  </tr>
+                </thead>
+                <tbody id="campaign-schedule-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+
+      </main>
+
+      </div> <!-- Closes Main Outer Wrapper -->
+    </div> <!-- Closes Main Content Area -->
+  </div> <!-- Closes app-shell -->
+
+  <!-- ==================== 3. MODALS CONTAINER ==================== -->
+
+  <!-- A. CREATE/EDIT BOOKING MODAL (RIGHT SIDE DRAWER) -->
+  <div id="booking-modal" onclick="if (event.target === this) closeBookingModal()" class="hidden fixed inset-0 bg-slate-955/40 backdrop-blur-sm z-50 flex justify-end">
+    <div id="booking-modal-panel" class="glass-modal w-full max-w-md h-full p-6 shadow-2xl flex flex-col justify-between overflow-y-auto transform transition-transform duration-300 translate-x-full border-y-0 border-r-0 rounded-l-2xl sm:rounded-l-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <i data-lucide="calendar" class="w-5 h-5 text-brand-500"></i>
+          <span id="booking-modal-title">จองห้องไลฟ์สดใหม่</span>
+        </h3>
+        <button onclick="closeBookingModal()" class="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-all">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Form -->
+      <form id="booking-form" onsubmit="handleBookingSubmit(event)" class="mt-4 flex flex-col gap-4">
+        <input type="hidden" id="booking-modal-id">
+        
+        <!-- Brand Select & Campaign Name -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label for="booking-form-brand" class="text-xs font-semibold text-slate-500 uppercase">ลูกค้า (Brand) *</label>
+            <select id="booking-form-brand" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <!-- Seeded dynamically -->
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="booking-form-campaign" class="text-xs font-semibold text-slate-500 uppercase">ชื่อแคมเปญ (Campaign) *</label>
+            <input type="text" id="booking-form-campaign" list="campaign-suggestions" autocomplete="off" required placeholder="เช่น Live Mega Sale 6.6" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <datalist id="campaign-suggestions"></datalist>
+          </div>
+        </div>
+
+        <!-- Room Select & Date -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label for="booking-form-room" class="text-xs font-semibold text-slate-500 uppercase">ห้องไลฟ์ (Room) *</label>
+            <select id="booking-form-room" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <!-- Seeded dynamically -->
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="booking-form-date" class="text-xs font-semibold text-slate-500 uppercase">วันที่ใช้งาน (Date) *</label>
+            <input type="date" id="booking-form-date" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+        </div>
+
+        <!-- Start Time & End Time -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label for="booking-form-start-time" class="text-xs font-semibold text-slate-500 uppercase">เวลาเริ่ม (Start) *</label>
+            <select id="booking-form-start-time" required onchange="handleStartTimeChange(this.value)" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <!-- Generated in script -->
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="booking-form-end-time" class="text-xs font-semibold text-slate-500 uppercase">เวลาสิ้นสุด (End) *</label>
+            <select id="booking-form-end-time" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <!-- Generated in script -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Brief Details -->
+        <div class="flex flex-col gap-1.5">
+          <label for="booking-form-brief-text" class="text-xs font-semibold text-slate-500 uppercase">ข้อมูลสรุป (Brief Details)</label>
+          <textarea id="booking-form-brief-text" rows="2" placeholder="เช่น สรุปรายละเอียดเนื้อหา หรือเป้าหมายในการไลฟ์..." class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+        </div>
+
+        <!-- LS Artwork Layout -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-500 uppercase">ลิงก์ผลงาน (LS Artwork Layout)</label>
+            <button type="button" id="btn-add-artwork-link" onclick="addArtworkLinkRow()" class="text-xs font-bold text-brand-500 hover:text-brand-600 flex items-center gap-1 transition-all">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> เพิ่มลิงก์
+            </button>
+          </div>
+          
+          <!-- Read-only Display (Clickable badges for viewers) -->
+          <div id="artwork-links-readonly-display" class="hidden flex flex-wrap gap-2 py-1">
+            <!-- Clickable badges will go here -->
+          </div>
+
+          <!-- Edit Mode Container -->
+          <div id="artwork-links-container" class="flex flex-col gap-2 max-h-[140px] overflow-y-auto pr-1">
+            <!-- Dynamic rows will go here -->
+          </div>
+        </div>
+
+        <!-- Remark -->
+        <div class="hidden flex flex-col gap-1.5">
+          <label for="booking-form-remark" class="text-xs font-semibold text-slate-500 uppercase">หมายเหตุ (Remark)</label>
+          <textarea id="booking-form-remark" rows="2" placeholder="เช่น ขออุปกรณ์เสริม, ลิงก์ไลฟ์พิเศษ..." class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+        </div>
+
+        <!-- Status (Only shown during edit) -->
+        <div id="booking-form-status-container" class="hidden flex flex-col gap-1.5">
+          <label for="booking-form-status" class="text-xs font-semibold text-slate-500 uppercase">สถานะรายการ (Status)</label>
+          <select id="booking-form-status" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="Confirmed">Confirmed (จองแล้ว)</option>
+            <option value="Completed">Completed (จัดไลฟ์เสร็จสิ้น)</option>
+            <option value="Cancelled">Cancelled (ยกเลิกการจอง)</option>
+          </select>
+        </div>
+
+        <!-- Owner Read-only display -->
+        <div id="booking-form-owner-display" class="hidden text-xs text-slate-400 mt-1">
+          ผู้จอง: <span id="booking-owner-name" class="font-semibold">-</span> (<span id="booking-owner-email">-</span>)
+        </div>
+
+        <!-- Booking Conflict Alert -->
+        <div id="booking-conflict-alert" class="hidden bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs p-3 rounded-lg flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 animate-bounce text-rose-500"></i>
+          <span id="booking-conflict-text">ห้องสตูดิโอนี้ถูกจองในช่วงเวลาดังกล่าวแล้ว</span>
+        </div>
+
+        <!-- Error display area -->
+        <div id="booking-form-error" class="hidden bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3 rounded-lg flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+          <span id="booking-error-text">ข้อความแจ้งข้อผิดพลาด</span>
+        </div>
+
+        <!-- Actions Buttons -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-200 mt-2">
+          <!-- Left side delete option -->
+          <div>
+            <button type="button" id="btn-cancel-booking-action" onclick="deleteCurrentBooking()" class="hidden text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline">
+              ยกเลิกการจองนี้
+            </button>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="closeBookingModal()" class="px-4 py-2 hover:bg-slate-100 text-slate-500 text-sm font-semibold rounded-lg transition-all">
+              ปิดหน้าต่าง
+            </button>
+            <button type="submit" id="btn-save-booking" class="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 transition-all flex items-center gap-2">
+              <span id="btn-save-booking-text">บันทึกข้อมูล</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- B. ROOM MODAL -->
+  <div id="room-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass-modal w-full max-w-md p-6 rounded-2xl shadow-xl">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-950" id="room-modal-title">จัดการข้อมูลห้องไลฟ์</h3>
+        <button onclick="closeRoomModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="room-form" onsubmit="handleRoomSubmit(event)" class="mt-4 flex flex-col gap-4">
+        <input type="hidden" id="room-form-id">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ชื่อห้อง (Room Name)</label>
+          <input type="text" id="room-form-name" required placeholder="เช่น Room 01" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ความจุคน (Capacity)</label>
+          <input type="number" id="room-form-capacity" required value="5" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">รายละเอียด (Description)</label>
+          <input type="text" id="room-form-desc" placeholder="เช่น กล้องคู่และไฟสองตัว" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div class="flex flex-col gap-1" id="room-form-status-wrap">
+          <label class="text-xs font-bold text-slate-400 uppercase">สถานะ (Status)</label>
+          <select id="room-form-status" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="Active">Active (เปิดใช้งาน)</option>
+            <option value="Inactive">Inactive (ปิดการใช้งาน)</option>
+          </select>
+        </div>
+        <!-- UX Hint -->
+        <p class="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 rounded-lg border border-amber-100 dark:border-amber-900/30 flex items-start gap-1.5 leading-normal mt-1">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+          <span>การแก้ไขข้อมูลห้องไลฟ์สดจะมีผลเฉพาะการจองรอบใหม่เท่านั้น รายการจองเดิมที่เกิดขึ้นแล้วจะยังคงข้อมูลห้องแบบเดิมไว้</span>
+        </p>
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <button type="button" onclick="closeRoomModal()" class="px-4 py-2 hover:bg-slate-100 text-slate-500 text-sm font-semibold rounded-lg">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- C. BRAND MODAL -->
+  <div id="brand-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass-modal w-full max-w-md p-6 rounded-2xl shadow-xl">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-950" id="brand-modal-title">จัดการข้อมูลแบรนด์</h3>
+        <button onclick="closeBrandModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="brand-form" onsubmit="handleBrandSubmit(event)" class="mt-4 flex flex-col gap-4">
+        <input type="hidden" id="brand-form-id">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ชื่อแบรนด์ (Brand Name)</label>
+          <input type="text" id="brand-form-name" required placeholder="เช่น L'Oreal, Samsung" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ผู้ดูแลแบรนด์ (Owner)</label>
+          <select id="brand-form-owner" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="">-- ไม่ระบุผู้ดูแล --</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1" id="brand-form-status-wrap">
+          <label class="text-xs font-bold text-slate-400 uppercase">สถานะ (Status)</label>
+          <select id="brand-form-status" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="Active">Active (เปิดใช้งาน)</option>
+            <option value="Inactive">Inactive (ปิดใช้งาน)</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <button type="button" onclick="closeBrandModal()" class="px-4 py-2 hover:bg-slate-100 text-slate-500 text-sm font-semibold rounded-lg">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg shadow-md shadow-brand-500/20">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- D. USER MODAL -->
+  <div id="user-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass-modal w-full max-w-md p-6 rounded-2xl shadow-xl">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-950" id="user-modal-title">จัดการข้อมูลผู้ใช้งาน</h3>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="user-form" onsubmit="handleUserSubmit(event)" class="mt-4 flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ชื่อผู้ใช้งาน (อีเมล / Username) *</label>
+          <input type="text" id="user-form-email" required placeholder="เช่น admin หรือ user@company.com" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">รหัสผ่านสำหรับเข้าใช้งาน (Password) *</label>
+          <input type="text" id="user-form-password" required placeholder="ใส่รหัสผ่านเข้าใช้งาน" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ชื่อทีมงาน (Display Name)</label>
+          <input type="text" id="user-form-name" required placeholder="เช่น นายสมชาย" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ระดับสิทธิ์การใช้งาน (Role)</label>
+          <select id="user-form-role" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="Viewer">Viewer (ดูได้อย่างเดียว)</option>
+            <option value="Campaign Manager">Campaign Manager (จอง/จัดการของตัวเอง)</option>
+            <option value="Admin">Admin (ดูงานแคมเปญ & ลิงก์ไดรฟ์)</option>
+            <option value="Master Admin">Master Admin (แอดมินสิทธิ์สูงสุด)</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1" id="user-form-status-wrap">
+          <label class="text-xs font-bold text-slate-400 uppercase">สถานะใช้งาน (Status)</label>
+          <select id="user-form-status" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="Active">Active (เปิดใช้งาน)</option>
+            <option value="Inactive">Inactive (ระงับสิทธิ์)</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 hover:bg-slate-100 text-slate-500 text-sm font-semibold rounded-lg">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg shadow-md shadow-brand-500/20">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- E. ROLE MODAL -->
+  <div id="role-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass-modal w-full max-w-lg p-6 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-950" id="role-modal-title">จัดการบทบาทและสิทธิ์ผู้ใช้งาน</h3>
+        <button type="button" onclick="closeRoleModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="role-form" onsubmit="handleRoleSubmit(event)" class="mt-4 flex flex-col gap-4">
+        <input type="hidden" id="role-form-is-edit" value="false">
+        
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ชื่อบทบาท (Role Name) *</label>
+          <input type="text" id="role-form-name" required placeholder="เช่น Creative Team, Supervisor" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+        
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">คำอธิบายรายละเอียดบทบาท</label>
+          <input type="text" id="role-form-description" placeholder="เช่น แอดมินสิทธิ์สูงดูแลการไลฟ์" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+        </div>
+
+        <div class="flex flex-col gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+          <span class="text-xs font-bold text-slate-500 uppercase">สิทธิ์การจองคิวงานไลฟ์สด</span>
+          <div class="flex flex-col sm:flex-row gap-4">
+            <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" id="role-form-can-create" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500">
+              <span>สร้างคิวจองได้ (Create)</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" id="role-form-can-edit" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500">
+              <span>แก้ไขคิวจองได้ (Edit)</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" id="role-form-can-cancel" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500">
+              <span>ยกเลิกคิวจองได้ (Cancel)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+          <span class="text-xs font-bold text-slate-500 uppercase">สิทธิ์ระดับแอดมินระบบหลัก (Admin Privilege)</span>
+          <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <input type="checkbox" id="role-form-is-admin" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500">
+            <span>อนุญาตให้เป็นผู้ดูแลระบบสูงสุด (Is Admin) - สามารถจัดการข้อมูลแอดมินได้</span>
+          </label>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-slate-400 uppercase">แท็บเมนูที่อนุญาตให้แสดงผล (Allowed Menu Tabs)</label>
+          <div class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100 max-h-[160px] overflow-y-auto">
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="my-bookings" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>การจองของฉัน (My Bookings)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="calendar" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>ปฏิทินรายเดือน (Calendar)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="scheduler" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>ตารางจองรวม Timeline (Scheduler)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="campaign-schedule" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>ตารางงานของแคมเปญ List (Schedule)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="analytics" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>รายงานสถิติ (Analytics)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="rooms" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>จัดการห้องไลฟ์ (Rooms)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="brands" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>จัดการแบรนด์ (Brands)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="users" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>สิทธิ์ผู้ใช้งาน (Users)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="audit-log" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>ประวัติกิจกรรม (Audit Log)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="settings" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>ตั้งค่าระบบ (Settings)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" value="roles-mgmt" class="role-form-tab-checkbox rounded border-slate-300 text-brand-500">
+              <span>จัดการระดับสิทธิ์ (Roles)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-4 border-t border-slate-200">
+          <button type="button" onclick="closeRoleModal()" class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-semibold transition-all">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-brand-500/20">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- F. MASTER PASSWORD SETTINGS MODAL -->
+  <div id="change-password-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass-modal w-full max-w-md p-6 rounded-2xl shadow-xl">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-950">เปลี่ยน Master Password สำหรับ Audit Log</h3>
+        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="change-password-form" onsubmit="handleChangePasswordSubmit(event)" class="mt-4 flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">รหัสผ่านปัจจุบัน (Current Master Password)</label>
+          <input type="password" id="change-password-old" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">รหัสผ่านใหม่ (New Master Password)</label>
+          <input type="password" id="change-password-new" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-slate-400 uppercase">ยืนยันรหัสผ่านใหม่ (Confirm New Password)</label>
+          <input type="password" id="change-password-confirm" required class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 hover:bg-slate-100 text-slate-500 text-sm font-semibold rounded-lg">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg shadow-md shadow-brand-500/20">อัปเดตรหัสผ่าน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-32px)] sm:w-80 max-w-sm z-[99] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main app script -->
+  <script src="app.js?v=1.4.0"></script>
+</body>
+</html>
+
