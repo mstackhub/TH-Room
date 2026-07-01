@@ -5931,7 +5931,6 @@ function checkBookingConflict() {
       if (saveBtn) saveBtn.disabled = true;
       return;
     }
-  }
   
   if (conflictAlert) conflictAlert.classList.add('hidden');
   if (saveBtn) saveBtn.disabled = false;
