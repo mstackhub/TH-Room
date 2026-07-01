@@ -1902,6 +1902,16 @@ function switchTab(tabId) {
   if (activePane) {
     activePane.classList.add('active');
   }
+
+  // Show/Hide KPI Section dynamically based on tab (hidden on analytics/statistics tab)
+  const kpiSection = document.getElementById('kpi-section');
+  if (kpiSection) {
+    if (tabId === 'analytics') {
+      kpiSection.classList.add('hidden');
+    } else {
+      kpiSection.classList.remove('hidden');
+    }
+  }
   
   // Auto-close sidebar on mobile/tablet after selection
   if (window.innerWidth < 768) {
