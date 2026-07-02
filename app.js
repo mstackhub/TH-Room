@@ -6263,7 +6263,8 @@ function renderCampaignSchedule() {
       }
       return a.roomName.localeCompare(b.roomName);
     });
-  }
+  // Store filtered list for exporting
+  state.lastCampaignBookings = finalBookings;
 
   // 6. Render table rows
   const tbody = document.getElementById('campaign-schedule-table-body');
@@ -6404,5 +6405,84 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Export campaign schedule data matching the requested Excel columns:
+ * ล (Date) | day (Day of Week) | start (Start Time) | end (End Time) | hrs (Duration) | brand (Brand)
+ */
+function exportCampaignScheduleToExcel() {
+  const list = state.lastCampaignBookings;
+  if (!list || list.length === 0) {
+    showToast("ไม่มีข้อมูลในตารางสำหรับส่งออก Excel", "warning");
+    return;
+  }
+  
+  const headers = ['ล', 'day', 'start', 'end', 'hrs', 'brand'];
+  const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const csvRows = [headers.join(',')];
+  
+  list.forEach(b => {
+    // 1. Format date (ล) e.g., 4-Jul-2026
+    let formattedDate = b.date || "";
+    let dayAbbrev = "";
+    if (b.date) {
+      const parts = b.date.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        
+        formattedDate = `${day}-${monthsShort[monthIdx]}-${year}`;
+        
+        // Use UTC date to bypass local timezone offsets
+        const dObj = new Date(Date.UTC(year, monthIdx, day));
+        dayAbbrev = daysShort[dObj.getUTCDay()];
+      }
+    }
+    
+    // 2. Start & End times
+    const start = b.startTime || "";
+    const end = b.endTime || "";
+    
+    // 3. Format hrs e.g. 14:00
+    let hrsText = "";
+    if (start && end) {
+      const startMins = parseTimeToMinutes(start);
+      const endMins = parseTimeToMinutes(end);
+      let diff = endMins - startMins;
+      if (diff < 0) {
+        diff += 24 * 60; // handle midnight crossing
+      }
+      const hours = Math.floor(diff / 60);
+      const minutes = diff % 60;
+      hrsText = `${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+    }
+    
+    // 4. Format brand (quote escape for CSV safety)
+    const brand = `"${(b.brandName || "").replace(/"/g, '""')}"`;
+    
+    const row = [formattedDate, dayAbbrev, start, end, hrsText, brand];
+    csvRows.push(row.join(','));
+  });
+  
+  // Combine rows with UTF-8 BOM to prevent Thai encoding issues in Excel/Google Sheets
+  const csvContent = "\uFEFF" + csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  
+  const todayStr = getFormattedDate(new Date());
+  link.setAttribute("download", `campaign_schedule_${todayStr}.csv`);
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showToast("ดาวน์โหลดไฟล์ตารางงานแคมเปญสำเร็จ (CSV)", "success");
 }
 
