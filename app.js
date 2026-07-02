@@ -6485,4 +6485,4 @@ function exportCampaignScheduleToExcel() {
   
   showToast("ดาวน์โหลดไฟล์ตารางงานแคมเปญสำเร็จ (CSV)", "success");
 }
-
+}
