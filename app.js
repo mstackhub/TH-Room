@@ -6263,6 +6263,7 @@ function renderCampaignSchedule() {
       }
       return a.roomName.localeCompare(b.roomName);
     });
+  }
   // Store filtered list for exporting
   state.lastCampaignBookings = finalBookings;
 
@@ -6484,5 +6485,4 @@ function exportCampaignScheduleToExcel() {
   document.body.removeChild(link);
   
   showToast("ดาวน์โหลดไฟล์ตารางงานแคมเปญสำเร็จ (CSV)", "success");
-}
 }
