@@ -5,6 +5,15 @@
 
 let GAS_API_URL = localStorage.getItem('gas_api_url') || "https://script.google.com/macros/s/AKfycbyUm0c2LCXIS9b76TsTmD7mWVzAuILkGa4HJUbHfoUDBBRflfVXAV26TBSgUYAFoqtX/exec";
 
+// Global error reporter to capture client-side runtime errors and display them as toasts
+window.addEventListener('error', (event) => {
+  const errMsg = `${event.message} (${event.filename.split('/').pop()}:${event.lineno})`;
+  console.error("Global JS Error Captured:", event);
+  if (typeof showToast === 'function') {
+    showToast("พบปัญหาที่หน้าเว็บ: " + errMsg, "error");
+  }
+});
+
 // State Management
 let state = {
   currentUser: null,      // { email, name, role, status }
@@ -2129,107 +2138,125 @@ function getArtworkLinksFromForm() {
  * Automatically fills: Room, Date (from state.selectedDate), Start/End time
  */
 function openBookingCreateFromGrid(roomName, startTimeStr, endTimeStr) {
-  openBookingModal();
+  try {
+    openBookingModal();
 
-  // Rebuild room dropdown from state.rooms so value can be set correctly
-  const roomSel = document.getElementById('booking-form-room');
-  if (roomSel && state.rooms && state.rooms.length > 0) {
-    roomSel.innerHTML = `<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2b\u0e49\u0e2d\u0e07\u0e44\u0e25\u0e1f\u0e4c --</option>`;
-    state.rooms.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.name;
-      opt.textContent = `${r.name} (${r.description || ''})`.trim();
-      roomSel.appendChild(opt);
-    });
-  }
-  if (roomSel && roomName) {
-    // Ensure the clicked room exists as an option
-    const exists = Array.from(roomSel.options).some(o => o.value === roomName);
-    if (!exists) {
-      const opt = document.createElement('option');
-      opt.value = roomName;
-      opt.textContent = roomName;
-      roomSel.appendChild(opt);
+    // Rebuild room dropdown from state.rooms so value can be set correctly
+    const roomSel = document.getElementById('booking-form-room');
+    if (roomSel && state.rooms && state.rooms.length > 0) {
+      roomSel.innerHTML = `<option value="">-- เลือกห้องไลฟ์ --</option>`;
+      state.rooms.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = `${r.name} (${r.description || ''})`.trim();
+        roomSel.appendChild(opt);
+      });
     }
-    roomSel.value = roomName;
-  }
+    if (roomSel && roomName) {
+      // Ensure the clicked room exists as an option
+      const exists = Array.from(roomSel.options).some(o => o.value === roomName);
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = roomName;
+        opt.textContent = roomName;
+        roomSel.appendChild(opt);
+      }
+      roomSel.value = roomName;
+    }
 
-  // Set date (use both setAttribute + .value for Safari compatibility)
-  const dateInput = document.getElementById('booking-form-date');
-  if (dateInput && state.selectedDate) {
-    dateInput.setAttribute('value', state.selectedDate);
-    dateInput.value = state.selectedDate;
-  }
+    // Set date (use both setAttribute + .value for Safari compatibility)
+    const dateInput = document.getElementById('booking-form-date');
+    if (dateInput && state.selectedDate) {
+      dateInput.setAttribute('value', state.selectedDate);
+      dateInput.value = state.selectedDate;
+    }
 
-  // Set times
-  document.getElementById('booking-form-start-time').value = startTimeStr;
-  document.getElementById('booking-form-end-time').value = endTimeStr === "24:00" ? "23:59" : endTimeStr;
+    // Set times
+    document.getElementById('booking-form-start-time').value = startTimeStr;
+    document.getElementById('booking-form-end-time').value = endTimeStr === "24:00" ? "23:59" : endTimeStr;
+  } catch (err) {
+    console.error("Error in openBookingCreateFromGrid:", err);
+    if (typeof showToast === 'function') {
+      showToast("ข้อผิดพลาดเลือกช่วงเวลา: " + err.message, "error");
+    } else {
+      alert("Error in openBookingCreateFromGrid: " + err.message);
+    }
+  }
 }
 
 function openBookingModal() {
-  _openBookingModalPanel();
+  try {
+    _openBookingModalPanel();
 
-  document.getElementById('booking-modal-title').innerText = "จองห้องไลฟ์สดใหม่";
-  document.getElementById('booking-form').reset();
-  document.getElementById('booking-modal-id').value = "";
-  document.getElementById('booking-form-error').classList.add('hidden');
+    document.getElementById('booking-modal-title').innerText = "จองห้องไลฟ์สดใหม่";
+    document.getElementById('booking-form').reset();
+    document.getElementById('booking-modal-id').value = "";
+    document.getElementById('booking-form-error').classList.add('hidden');
 
-  // Hide conflict warning initially
-  const conflictAlert = document.getElementById('booking-conflict-alert');
-  if (conflictAlert) conflictAlert.classList.add('hidden');
+    // Hide conflict warning initially
+    const conflictAlert = document.getElementById('booking-conflict-alert');
+    if (conflictAlert) conflictAlert.classList.add('hidden');
 
-  document.getElementById('btn-cancel-booking-action').classList.add('hidden');
-  document.getElementById('booking-form-status-container').classList.add('hidden');
-  document.getElementById('booking-form-owner-display').classList.add('hidden');
+    document.getElementById('btn-cancel-booking-action').classList.add('hidden');
+    document.getElementById('booking-form-status-container').classList.add('hidden');
+    document.getElementById('booking-form-owner-display').classList.add('hidden');
 
-  // Reset extra fields
-  document.getElementById('booking-form-brief-text').value = "";
-  document.getElementById('artwork-links-container').innerHTML = "";
-  document.getElementById('artwork-links-readonly-display').innerHTML = "";
-  document.getElementById('artwork-links-readonly-display').classList.add('hidden');
-  document.getElementById('artwork-links-container').classList.remove('hidden');
-  document.getElementById('btn-add-artwork-link').classList.remove('hidden');
+    // Reset extra fields
+    document.getElementById('booking-form-brief-text').value = "";
+    document.getElementById('artwork-links-container').innerHTML = "";
+    document.getElementById('artwork-links-readonly-display').innerHTML = "";
+    document.getElementById('artwork-links-readonly-display').classList.add('hidden');
+    document.getElementById('artwork-links-container').classList.remove('hidden');
+    document.getElementById('btn-add-artwork-link').classList.remove('hidden');
 
-  // --- STEP 1: ENABLE ALL FIELDS FIRST (so .value assignments below work) ---
-  const formElements = document.getElementById('booking-form').querySelectorAll('input, select, textarea');
-  formElements.forEach(el => { el.disabled = false; });
+    // --- STEP 1: ENABLE ALL FIELDS FIRST (so .value assignments below work) ---
+    const formElements = document.getElementById('booking-form').querySelectorAll('input, select, textarea');
+    formElements.forEach(el => { el.disabled = false; });
 
-  // --- STEP 2: Populate dropdowns ---
-  populateBookingFormBrands();
-  populateCampaignSuggestions();
+    // --- STEP 2: Populate dropdowns ---
+    populateBookingFormBrands();
+    populateCampaignSuggestions();
 
-  // Rebuild room dropdown from state.rooms
-  const roomSel = document.getElementById('booking-form-room');
-  if (roomSel && state.rooms && state.rooms.length > 0) {
-    roomSel.innerHTML = `<option value="">-- เลือกห้องไลฟ์ --</option>`;
-    state.rooms.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.name;
-      opt.textContent = `${r.name} (${r.description || ''})`.trim();
-      roomSel.appendChild(opt);
-    });
+    // Rebuild room dropdown from state.rooms
+    const roomSel = document.getElementById('booking-form-room');
+    if (roomSel && state.rooms && state.rooms.length > 0) {
+      roomSel.innerHTML = `<option value="">-- เลือกห้องไลฟ์ --</option>`;
+      state.rooms.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = `${r.name} (${r.description || ''})`.trim();
+        roomSel.appendChild(opt);
+      });
+    }
+
+    // --- STEP 3: Set default values (fields are enabled so .value works) ---
+    const dateInput = document.getElementById('booking-form-date');
+    if (dateInput && state.selectedDate) {
+      dateInput.setAttribute('value', state.selectedDate);
+      dateInput.value = state.selectedDate;
+    }
+
+    // --- STEP 4: Apply permissions (disable if viewer) ---
+    const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || getUserRole() === 'master admin';
+    const isViewer = !canCreate;
+    formElements.forEach(el => { el.disabled = isViewer; });
+
+    const saveBtn = document.getElementById('btn-save-booking');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (isViewer) saveBtn.classList.add('hidden');
+      else saveBtn.classList.remove('hidden');
+    }
+
+    document.getElementById('btn-save-booking-text').innerText = "บันทึกการจอง";
+  } catch (err) {
+    console.error("Error in openBookingModal:", err);
+    if (typeof showToast === 'function') {
+      showToast("ข้อผิดพลาดของแบบฟอร์ม: " + err.message, "error");
+    } else {
+      alert("Error in openBookingModal: " + err.message);
+    }
   }
-
-  // --- STEP 3: Set default values (fields are enabled so .value works) ---
-  const dateInput = document.getElementById('booking-form-date');
-  if (dateInput && state.selectedDate) {
-    dateInput.setAttribute('value', state.selectedDate);
-    dateInput.value = state.selectedDate;
-  }
-
-  // --- STEP 4: Apply permissions (disable if viewer) ---
-  const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || getUserRole() === 'master admin';
-  const isViewer = !canCreate;
-  formElements.forEach(el => { el.disabled = isViewer; });
-
-  const saveBtn = document.getElementById('btn-save-booking');
-  if (saveBtn) {
-    saveBtn.disabled = false;
-    if (isViewer) saveBtn.classList.add('hidden');
-    else saveBtn.classList.remove('hidden');
-  }
-
-  document.getElementById('btn-save-booking-text').innerText = "บันทึกการจอง";
 }
 
 // Internal: just slides the modal panel open
@@ -5715,35 +5742,44 @@ function populateFilterDropdowns() {
 }
 
 function populateBookingFormBrands(targetValue) {
-  const brandSelect = document.getElementById('booking-form-brand');
-  if (!brandSelect) return;
-  
-  // Rebuild options list
-  brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
-  const filteredBrands = (state.brands || []).filter(brand => {
-    if (!state.currentUser) return false;
-    if (getUserRole() === 'master admin' || (state.currentUser.permissions && state.currentUser.permissions.isAdmin)) return true;
-    return brand.owner && brand.owner.toLowerCase() === state.currentUser.email.toLowerCase();
-  });
-  filteredBrands.forEach(brand => {
-    const opt = document.createElement('option');
-    opt.value = brand.name;
-    opt.textContent = brand.name;
-    brandSelect.appendChild(opt);
-  });
-  
-  // If a specific brand is requested (edit mode), ensure it's shown and selected
-  if (targetValue && targetValue.trim() !== '') {
-    const trimmed = targetValue.trim();
-    let found = Array.from(brandSelect.options).some(o => o.value === trimmed);
-    if (!found) {
-      // Brand not in user's filtered list — add it anyway so we can display it
+  try {
+    const brandSelect = document.getElementById('booking-form-brand');
+    if (!brandSelect) return;
+    
+    // Rebuild options list
+    brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
+    const filteredBrands = (state.brands || []).filter(brand => {
+      if (!state.currentUser) return false;
+      if (getUserRole() === 'master admin' || (state.currentUser.permissions && state.currentUser.permissions.isAdmin)) return true;
+      const userEmail = state.currentUser.email ? String(state.currentUser.email).toLowerCase() : '';
+      const brandOwner = brand.owner ? String(brand.owner).toLowerCase() : '';
+      return brandOwner && userEmail && brandOwner === userEmail;
+    });
+    filteredBrands.forEach(brand => {
       const opt = document.createElement('option');
-      opt.value = trimmed;
-      opt.textContent = trimmed;
+      opt.value = brand.name;
+      opt.textContent = brand.name;
       brandSelect.appendChild(opt);
+    });
+    
+    // If a specific brand is requested (edit mode), ensure it's shown and selected
+    if (targetValue && targetValue.trim() !== '') {
+      const trimmed = targetValue.trim();
+      let found = Array.from(brandSelect.options).some(o => o.value === trimmed);
+      if (!found) {
+        // Brand not in user's filtered list — add it anyway so we can display it
+        const opt = document.createElement('option');
+        opt.value = trimmed;
+        opt.textContent = trimmed;
+        brandSelect.appendChild(opt);
+      }
+      brandSelect.value = trimmed;
     }
-    brandSelect.value = trimmed;
+  } catch (err) {
+    console.error("Error in populateBookingFormBrands:", err);
+    if (typeof showToast === 'function') {
+      showToast("ข้อผิดพลาดในการโหลดแบรนด์: " + err.message, "error");
+    }
   }
 }
 
