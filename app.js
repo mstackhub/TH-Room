@@ -1560,7 +1560,7 @@ function updateTodayKpiBadgesWithData(todayBookings) {
  * Shift Selected Date (+1 or -1 days)
  */
 function shiftDate(offset) {
-  const current = new Date(state.selectedDate);
+  const current = parseDateSafely(state.selectedDate);
   current.setDate(current.getDate() + offset);
   state.selectedDate = getFormattedDate(current);
   document.getElementById('scheduler-date-picker').value = state.selectedDate;
@@ -3841,6 +3841,22 @@ function showLoadingOverlay(show) {
 /**
  * Dates formatter helpers
  */
+// Parse YYYY-MM-DD safely across all browsers (safely handles Safari/iOS quirks)
+function parseDateSafely(dateStr) {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const parts = dateStr.toString().split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      return new Date(y, m, d);
+    }
+  }
+  return new Date(dateStr);
+}
+
 function getFormattedDate(date) {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -3853,7 +3869,7 @@ function formatThaiDate(dateStr) {
     "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
     "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
   ];
-  const date = new Date(dateStr);
+  const date = parseDateSafely(dateStr);
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
 }
 
@@ -4836,7 +4852,7 @@ function createCalendarDayNode(dayNum, dateStr, isOtherMonth) {
       picker.value = dateStr;
     }
     // Also update calendarSelectedDate so other views keep sync if they switch modes later
-    state.calendarSelectedDate = new Date(dateStr);
+    state.calendarSelectedDate = parseDateSafely(dateStr);
     
     // Manage visual selection states
     document.querySelectorAll('.calendar-day-box').forEach(box => {
@@ -5501,7 +5517,7 @@ function renderPeakHours(bookings) {
   const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
   
   bookings.forEach(b => {
-    const dateObj = new Date(b.date);
+    const dateObj = parseDateSafely(b.date);
     const day = dateObj.getDay(); // 0 is Sun, 1 is Mon...
     
     const startHour = Math.floor(parseTimeToMinutes(b.startTime) / 60);
