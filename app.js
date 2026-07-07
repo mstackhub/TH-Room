@@ -2311,6 +2311,12 @@ function openBookingEditModal(bookingId) {
   // ── 2. Open the slide-in panel (no form.reset inside) ───────────────────────
   _openBookingModalPanel();
 
+  // IMPORTANT: Force-enable ALL fields FIRST before setting any values
+  // (disabled fields ignore/reject value assignments in some browsers)
+  document.getElementById('booking-form').querySelectorAll('input, select, textarea').forEach(f => {
+    f.disabled = false;
+  });
+
   // ── 3. Reset UI flags (error/conflict banners, hidden areas) ────────────────
   const el = id => document.getElementById(id);
   el('booking-form-error').classList.add('hidden');
@@ -2336,11 +2342,6 @@ function openBookingEditModal(bookingId) {
   populateCampaignSuggestions();
 
   // ── 7. Room dropdown ─────────────────────────────────────────────────────────
-  // IMPORTANT: Force-enable ALL fields FIRST before setting values
-  // (disabled fields ignore .value assignments — HTML spec behavior)
-  document.getElementById('booking-form').querySelectorAll('input, select, textarea').forEach(f => {
-    f.disabled = false;
-  });
 
   //   Rebuild room options from state.rooms
   const roomSel = el('booking-form-room');
