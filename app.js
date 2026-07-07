@@ -6309,8 +6309,17 @@ function renderCampaignSchedule() {
   const currentMins = todayObj.getHours() * 60 + todayObj.getMinutes();
 
   finalBookings.forEach(b => {
-    // Cumulative room hours
-    const cumulativeHours = roomHours[b.roomName] || 0;
+    // Booking duration hours
+    let durationHours = 0;
+    if (b.startTime && b.endTime) {
+      const startMins = parseTimeToMinutes(b.startTime);
+      const endMins = parseTimeToMinutes(b.endTime);
+      let diff = endMins - startMins;
+      if (diff < 0) {
+        diff += 24 * 60; // handle midnight crossing
+      }
+      durationHours = diff / 60;
+    }
 
     // Status Badge
     let statusClass = "bg-blue-50 text-blue-700 border-blue-200";
@@ -6381,7 +6390,7 @@ function renderCampaignSchedule() {
           ${escapeHtml(b.roomName)}
         </td>
         <td class="p-4 font-bold text-slate-900 dark:text-slate-100">
-          ${cumulativeHours.toFixed(1)} ชม.
+          ${durationHours.toFixed(1)} ชม.
         </td>
         <td class="p-4">
           <div class="font-bold text-brand-700 dark:text-brand-400 flex items-center">${escapeHtml(b.brandName)}${livePill}</div>
