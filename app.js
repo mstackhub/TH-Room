@@ -2143,18 +2143,7 @@ function openBookingCreateFromGrid(roomName, startTimeStr, endTimeStr) {
 }
 
 function openBookingModal() {
-  const modal = document.getElementById('booking-modal');
-  modal.classList.remove('hidden');
-  modal.classList.add('animate-fade-in');
-  
-  // Slide in panel
-  setTimeout(() => {
-    const panel = document.getElementById('booking-modal-panel');
-    if (panel) {
-      panel.classList.remove('translate-x-full');
-      panel.classList.add('translate-x-0');
-    }
-  }, 10);
+  _openBookingModalPanel();
 
   document.getElementById('booking-modal-title').innerText = "จองห้องไลฟ์สดใหม่";
   document.getElementById('booking-form').reset();
@@ -2179,7 +2168,7 @@ function openBookingModal() {
   document.getElementById('artwork-links-container').classList.remove('hidden');
   document.getElementById('btn-add-artwork-link').classList.remove('hidden');
   
-  // Re-enable form fields (which might have been disabled in openBookingEditModal)
+  // Re-enable form fields
   const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || getUserRole() === 'master admin';
   const isViewer = !canCreate;
   const formElements = document.getElementById('booking-form').querySelectorAll('input, select, textarea');
@@ -2200,6 +2189,20 @@ function openBookingModal() {
   // Set default date to selectedDate
   document.getElementById('booking-form-date').value = state.selectedDate;
   document.getElementById('btn-save-booking-text').innerText = "บันทึกการจอง";
+}
+
+// Internal: just slides the modal panel open
+function _openBookingModalPanel() {
+  const modal = document.getElementById('booking-modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('animate-fade-in');
+  setTimeout(() => {
+    const panel = document.getElementById('booking-modal-panel');
+    if (panel) {
+      panel.classList.remove('translate-x-full');
+      panel.classList.add('translate-x-0');
+    }
+  }, 10);
 }
 
 function closeBookingModal() {
@@ -2231,7 +2234,20 @@ function openBookingEditModal(bookingId) {
             (state.calendarBookings && state.calendarBookings.find(x => x.id && x.id.toString() === bookingId.toString()));
   if (!b) return;
   
-  openBookingModal();
+  // Open the panel WITHOUT resetting the form (form.reset() would wipe the data we're about to fill)
+  _openBookingModalPanel();
+  
+  // Reset error state and hidden UI elements
+  document.getElementById('booking-form-error').classList.add('hidden');
+  const conflictAlert = document.getElementById('booking-conflict-alert');
+  if (conflictAlert) conflictAlert.classList.add('hidden');
+  document.getElementById('booking-form-status-container').classList.add('hidden');
+  document.getElementById('artwork-links-readonly-display').classList.add('hidden');
+  document.getElementById('artwork-links-container').classList.remove('hidden');
+  
+  // Populate brand dropdown FIRST so the value can be set correctly
+  populateBookingFormBrands();
+  populateCampaignSuggestions();
   
   document.getElementById('booking-modal-title').innerText = "รายละเอียดและแก้ไขการจอง";
   document.getElementById('booking-modal-id').value = b.id;
