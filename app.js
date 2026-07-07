@@ -6107,10 +6107,34 @@ function renderCampaignSchedule() {
     return b.date >= startDate && b.date <= endDate;
   });
 
-  // 2. Populate dynamic dropdowns (Active Brands & Active Owners in this date range)
+  // 2. Populate dynamic dropdowns (Active Rooms, Active Brands & Active Owners in this date range)
+  const roomDropdown = document.getElementById('campaign-schedule-filter-room');
   const brandDropdown = document.getElementById('campaign-schedule-filter-brand');
   const ownerDropdown = document.getElementById('campaign-schedule-filter-owner');
   
+  if (roomDropdown) {
+    const prevSelectedRoom = roomDropdown.value || 'All';
+    const roomList = state.rooms && state.rooms.length > 0
+      ? state.rooms.map(r => r.name)
+      : [...new Set(bookingsInDateRange.map(b => b.roomName))].sort();
+      
+    const roomListKey = roomList.join('|');
+    if (state.lastCampaignRoomsKey !== roomListKey) {
+      state.lastCampaignRoomsKey = roomListKey;
+      let roomHtml = '<option value="All">ทุกห้อง (All Rooms)</option>';
+      roomList.forEach(r => {
+        roomHtml += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
+      });
+      roomDropdown.innerHTML = roomHtml;
+      
+      if (roomList.includes(prevSelectedRoom)) {
+        roomDropdown.value = prevSelectedRoom;
+      } else {
+        roomDropdown.value = 'All';
+      }
+    }
+  }
+
   if (brandDropdown && ownerDropdown) {
     const prevSelectedBrand = brandDropdown.value || 'All';
     const prevSelectedOwner = ownerDropdown.value || 'All';
@@ -6152,6 +6176,7 @@ function renderCampaignSchedule() {
     }
   }
 
+  const selectedRoom = roomDropdown ? roomDropdown.value : 'All';
   const selectedBrand = brandDropdown ? brandDropdown.value : 'All';
   const selectedOwner = ownerDropdown ? ownerDropdown.value : 'All';
   const selectedStatus = document.getElementById('campaign-schedule-filter-status').value;
@@ -6198,6 +6223,10 @@ function renderCampaignSchedule() {
 
   // 4. Apply filters to compute the list of bookings to display (matches summary card date filter logic)
   let finalBookings = [...bookingsInDateRange];
+
+  if (selectedRoom && selectedRoom !== 'All') {
+    finalBookings = finalBookings.filter(b => b.roomName === selectedRoom);
+  }
 
   if (selectedBrand && selectedBrand !== 'All') {
     finalBookings = finalBookings.filter(b => b.brandName === selectedBrand);
