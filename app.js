@@ -2180,7 +2180,8 @@ function openBookingModal() {
   document.getElementById('btn-add-artwork-link').classList.remove('hidden');
   
   // Re-enable form fields (which might have been disabled in openBookingEditModal)
-  const isViewer = state.currentUser && (getUserRole() === 'viewer' || getUserRole() === 'admin');
+  const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || getUserRole() === 'master admin';
+  const isViewer = !canCreate;
   const formElements = document.getElementById('booking-form').querySelectorAll('input, select, textarea');
   formElements.forEach(el => {
     el.disabled = isViewer;
@@ -2225,9 +2226,9 @@ function openBookingEditModal(bookingId) {
     return;
   }
   // Search across date-specific bookings, user bookings, and the global calendarBookings pool
-  const b = (state.bookings && state.bookings.find(x => x.id === bookingId)) || 
-            (state.myBookings && state.myBookings.find(x => x.id === bookingId)) ||
-            (state.calendarBookings && state.calendarBookings.find(x => x.id === bookingId));
+  const b = (state.bookings && state.bookings.find(x => x.id && x.id.toString() === bookingId.toString())) || 
+            (state.myBookings && state.myBookings.find(x => x.id && x.id.toString() === bookingId.toString())) ||
+            (state.calendarBookings && state.calendarBookings.find(x => x.id && x.id.toString() === bookingId.toString()));
   if (!b) return;
   
   openBookingModal();
@@ -2264,12 +2265,12 @@ function openBookingEditModal(bookingId) {
   // Load new fields
   document.getElementById('booking-form-brief-text').value = b.briefText || "";
   
-  // Check authorization: non-admin non-owner can only view, fields read-only
-  const isOwner = String(b.ownerEmail || '').toLowerCase() === String(state.currentUser.email || '').toLowerCase();
+  // Check authorization: can edit if they have edit permission (or are master admin) or are the owner
+  const currentUserEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : '';
+  const isOwner = String(b.ownerEmail || '').toLowerCase() === String(currentUserEmail).toLowerCase();
   const userRole = getUserRole();
-  const isAdmin = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.isAdmin) || userRole === 'master admin';
-  const isViewer = userRole === 'viewer' || userRole === 'admin';
-  const hasAccess = !isViewer && (isAdmin || isOwner);
+  const canEdit = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
+  const hasAccess = canEdit || isOwner;
   
   // LS Artwork Layout link processing
   const container = document.getElementById('artwork-links-container');
@@ -5134,9 +5135,13 @@ function renderDayView() {
     const btnGroup = document.createElement('div');
     btnGroup.className = "flex items-center gap-1.5";
     
-    const isViewer = state.currentUser && (getUserRole() === 'viewer' || getUserRole() === 'admin');
+    const userRole = getUserRole();
+    const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || userRole === 'master admin';
+    const canEdit = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
+    const isOwner = String(b.ownerEmail || '').toLowerCase() === String(state.currentUser.email || '').toLowerCase();
+    const hasEditAccess = canEdit || isOwner;
     
-    if (!isViewer) {
+    if (canCreate) {
       const dupBtn = document.createElement('button');
       dupBtn.className = "p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-355 rounded-xl border border-slate-200 dark:border-slate-700 transition-all";
       dupBtn.title = "ทำซ้ำรายการจอง";
@@ -5149,13 +5154,13 @@ function renderDayView() {
     }
     
     const editBtn = document.createElement('button');
-    if (isViewer) {
+    if (hasEditAccess) {
+      editBtn.className = "px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-brand-500/10 hover:shadow-md hover:shadow-brand-500/25 transition-all flex items-center gap-1.5";
+      editBtn.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4"></i> แก้ไข`;
+    } else {
       editBtn.className = "px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5";
       editBtn.title = "ดูรายละเอียดการจอง";
       editBtn.innerHTML = `<i data-lucide="eye" class="w-4 h-4"></i> รายละเอียด`;
-    } else {
-      editBtn.className = "px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-brand-500/10 hover:shadow-md hover:shadow-brand-500/25 transition-all flex items-center gap-1.5";
-      editBtn.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4"></i> แก้ไข`;
     }
     editBtn.onclick = (e) => {
       e.stopPropagation();
@@ -5234,13 +5239,17 @@ function createBookingCard(b) {
   statusBadge.innerText = statusText;
   
   const editBtn = document.createElement('span');
-  const isViewer = state.currentUser && (getUserRole() === 'viewer' || getUserRole() === 'admin');
-  if (isViewer) {
-    editBtn.className = "text-[9px] font-semibold text-slate-500 hover:underline flex items-center gap-0.5 shrink-0";
-    editBtn.innerHTML = `<i data-lucide="eye" class="w-2.5 h-2.5"></i> รายละเอียด`;
-  } else {
+  const userRole = getUserRole();
+  const canEdit = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
+  const isOwner = String(b.ownerEmail || '').toLowerCase() === String(state.currentUser.email || '').toLowerCase();
+  const hasEditAccess = canEdit || isOwner;
+  
+  if (hasEditAccess) {
     editBtn.className = "text-[9px] font-semibold text-brand-650 dark:text-brand-400 hover:underline flex items-center gap-0.5 shrink-0";
     editBtn.innerHTML = `<i data-lucide="edit-3" class="w-2.5 h-2.5"></i> แก้ไข`;
+  } else {
+    editBtn.className = "text-[9px] font-semibold text-slate-500 hover:underline flex items-center gap-0.5 shrink-0";
+    editBtn.innerHTML = `<i data-lucide="eye" class="w-2.5 h-2.5"></i> รายละเอียด`;
   }
   
   bottomRow.appendChild(statusBadge);
