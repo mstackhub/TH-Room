@@ -728,11 +728,11 @@ function prefetchAllTabsInBackground() {
     ['analytics',   2400],
   ];
 
-  // Admin tabs only for Master Admin users
-  if (state.currentUser && getUserRole() === 'master admin') {
-    queue.push(['rooms',     3200]);
-    queue.push(['brands',    4000]);
-    queue.push(['users',     4800]);
+  // Admin tabs prefetching dynamically based on actual permissions
+  if (state.currentUser) {
+    if (hasTabPermission('rooms')) queue.push(['rooms', 3200]);
+    if (hasTabPermission('brands')) queue.push(['brands', 4000]);
+    if (hasTabPermission('users')) queue.push(['users', 4800]);
   }
 
   queue.forEach(([tabId, delay]) => {
@@ -1099,7 +1099,11 @@ function filterMyBookings() {
     
     // Disable edit for Cancelled or Completed if not admin, or if Viewer
     const userRole = getUserRole();
-    const canEdit = userRole !== 'viewer' && userRole !== 'admin' && (userRole === 'master admin' || b.status === 'Confirmed');
+    const isUserAdmin = state.currentUser && (
+      (state.currentUser.permissions && state.currentUser.permissions.isAdmin) || 
+      userRole === 'master admin'
+    );
+    const canEdit = userRole !== 'viewer' && userRole !== 'admin' && (isUserAdmin || b.status === 'Confirmed');
     
     const statusCellHtml = `<span class="px-2.5 py-1 text-xs font-bold rounded-full border ${statusClass}">${statusThText}</span>`;
     
@@ -1296,7 +1300,10 @@ function quickUpdateBookingStatus(bookingId, newStatus) {
   
   // Settle permissions
   const isOwner = b.ownerEmail && state.currentUser && String(b.ownerEmail).toLowerCase() === String(state.currentUser.email).toLowerCase();
-  const isAdmin = state.currentUser && getUserRole() === 'master admin';
+  const isAdmin = state.currentUser && (
+    (state.currentUser.permissions && state.currentUser.permissions.isAdmin) || 
+    getUserRole() === 'master admin'
+  );
   if (!isAdmin && !isOwner) {
     showToast("คุณไม่มีสิทธิ์แก้ไขสถานะของรายการจองนี้", "error");
     filterMyBookings();
@@ -2258,7 +2265,7 @@ function openBookingEditModal(bookingId) {
   // Check authorization: non-admin non-owner can only view, fields read-only
   const isOwner = String(b.ownerEmail || '').toLowerCase() === String(state.currentUser.email || '').toLowerCase();
   const userRole = getUserRole();
-  const isAdmin = userRole === 'master admin';
+  const isAdmin = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.isAdmin) || userRole === 'master admin';
   const isViewer = userRole === 'viewer' || userRole === 'admin';
   const hasAccess = !isViewer && (isAdmin || isOwner);
   
@@ -5620,7 +5627,7 @@ function populateBookingFormBrands() {
     brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
     const filteredBrands = (state.brands || []).filter(b => {
       if (!state.currentUser) return false;
-      if (getUserRole() === 'master admin') return true;
+      if (getUserRole() === 'master admin' || (state.currentUser.permissions && state.currentUser.permissions.isAdmin)) return true;
       return b.owner && b.owner.toLowerCase() === state.currentUser.email.toLowerCase();
     });
     filteredBrands.forEach(b => {
@@ -5755,7 +5762,7 @@ function clearAllFilters() {
  * LINE Notification Settings functions
  */
 function loadSettingsTab(isSilent = false) {
-  if (getUserRole() !== 'master admin') {
+  if (!hasTabPermission('settings')) {
     showToast("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "error");
     switchTab('scheduler');
     return;
