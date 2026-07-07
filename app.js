@@ -1099,13 +1099,11 @@ function filterMyBookings() {
       statusThText = "ยกเลิก";
     }
     
-    // Disable edit for Cancelled or Completed if not admin, or if Viewer
+    // Disable edit for Cancelled or Completed if not admin, or if no edit permission
     const userRole = getUserRole();
-    const isUserAdmin = state.currentUser && (
-      (state.currentUser.permissions && state.currentUser.permissions.isAdmin) || 
-      userRole === 'master admin'
-    );
-    const canEdit = userRole !== 'viewer' && userRole !== 'admin' && (isUserAdmin || b.status === 'Confirmed');
+    const canEditPerm = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
+    const isBookingOwner = String(b.ownerEmail || '').toLowerCase() === String(state.currentUser.email || '').toLowerCase();
+    const canEdit = (canEditPerm || isBookingOwner) && b.status !== 'Cancelled';
     
     const statusCellHtml = `<span class="px-2.5 py-1 text-xs font-bold rounded-full border ${statusClass}">${statusThText}</span>`;
     
@@ -1169,21 +1167,17 @@ function filterMyBookings() {
         <td class="p-4">${statusCellHtml}</td>
         <td class="p-4 text-right">
           <div class="flex items-center justify-end gap-1.5">
-            ${state.currentUser && (getUserRole() === 'viewer' || getUserRole() === 'admin') ? `
-              <button onclick="openBookingEditModal('${b.id}')" class="p-1.5 bg-slate-100 hover:bg-slate-250 text-slate-600 rounded-md border border-slate-200 transition-all flex items-center justify-center shrink-0" title="ดูรายละเอียดการจอง">
-                <i data-lucide="eye" class="w-4 h-4"></i>
-              </button>
-            ` : `
+            ${canEdit ? `
               <button onclick="duplicateBooking('${b.id}')" class="p-1.5 bg-slate-100 hover:bg-brand-50 hover:text-brand-600 text-slate-600 rounded-md border border-slate-200 hover:border-brand-200 transition-all flex items-center justify-center shrink-0" title="ทำซ้ำ (คัดลอกการจอง)">
                 <i data-lucide="copy" class="w-4 h-4"></i>
               </button>
-              ${canEdit ? `
-                <button onclick="openBookingEditModal('${b.id}')" class="p-1.5 bg-slate-100 hover:bg-brand-50 hover:text-brand-600 text-slate-600 rounded-md border border-slate-200 hover:border-brand-200 transition-all flex items-center justify-center shrink-0" title="แก้ไขการจอง">
-                  <i data-lucide="edit-3" class="w-4 h-4"></i>
-                </button>
-              ` : `
-                <span class="w-7 text-center text-slate-300">-</span>
-              `}
+              <button onclick="openBookingEditModal('${b.id}')" class="p-1.5 bg-slate-100 hover:bg-brand-50 hover:text-brand-600 text-slate-600 rounded-md border border-slate-200 hover:border-brand-200 transition-all flex items-center justify-center shrink-0" title="แก้ไขการจอง">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+            ` : `
+              <button onclick="openBookingEditModal('${b.id}')" class="p-1.5 bg-slate-100 hover:bg-slate-250 text-slate-600 rounded-md border border-slate-200 transition-all flex items-center justify-center shrink-0" title="ดูรายละเอียดการจอง">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
             `}
           </div>
         </td>
