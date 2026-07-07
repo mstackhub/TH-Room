@@ -2126,12 +2126,42 @@ function getArtworkLinksFromForm() {
 
 /**
  * Open Booking creation prefilled from timeline cell click
+ * Automatically fills: Room, Date (from state.selectedDate), Start/End time
  */
 function openBookingCreateFromGrid(roomName, startTimeStr, endTimeStr) {
   openBookingModal();
-  
-  document.getElementById('booking-form-room').value = roomName;
-  document.getElementById('booking-form-date').value = state.selectedDate;
+
+  // Rebuild room dropdown from state.rooms so value can be set correctly
+  const roomSel = document.getElementById('booking-form-room');
+  if (roomSel && state.rooms && state.rooms.length > 0) {
+    roomSel.innerHTML = `<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2b\u0e49\u0e2d\u0e07\u0e44\u0e25\u0e1f\u0e4c --</option>`;
+    state.rooms.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.name;
+      opt.textContent = `${r.name} (${r.description || ''})`.trim();
+      roomSel.appendChild(opt);
+    });
+  }
+  if (roomSel && roomName) {
+    // Ensure the clicked room exists as an option
+    const exists = Array.from(roomSel.options).some(o => o.value === roomName);
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = roomName;
+      opt.textContent = roomName;
+      roomSel.appendChild(opt);
+    }
+    roomSel.value = roomName;
+  }
+
+  // Set date (use both setAttribute + .value for Safari compatibility)
+  const dateInput = document.getElementById('booking-form-date');
+  if (dateInput && state.selectedDate) {
+    dateInput.setAttribute('value', state.selectedDate);
+    dateInput.value = state.selectedDate;
+  }
+
+  // Set times
   document.getElementById('booking-form-start-time').value = startTimeStr;
   document.getElementById('booking-form-end-time').value = endTimeStr === "24:00" ? "23:59" : endTimeStr;
 }
@@ -2180,8 +2210,24 @@ function openBookingModal() {
     }
   }
   
-  // Set default date to selectedDate
-  document.getElementById('booking-form-date').value = state.selectedDate;
+  // Rebuild room dropdown from state.rooms (so grid-click pre-fill works correctly)
+  const roomSelModal = document.getElementById('booking-form-room');
+  if (roomSelModal && state.rooms && state.rooms.length > 0) {
+    roomSelModal.innerHTML = `<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2b\u0e49\u0e2d\u0e07\u0e44\u0e25\u0e1f\u0e4c --</option>`;
+    state.rooms.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.name;
+      opt.textContent = `${r.name} (${r.description || ''})`.trim();
+      roomSelModal.appendChild(opt);
+    });
+  }
+
+  // Set default date (use setAttribute for Safari compatibility)
+  const dateInput = document.getElementById('booking-form-date');
+  if (dateInput && state.selectedDate) {
+    dateInput.setAttribute('value', state.selectedDate);
+    dateInput.value = state.selectedDate;
+  }
   document.getElementById('btn-save-booking-text').innerText = "บันทึกการจอง";
 }
 
