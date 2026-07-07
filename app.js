@@ -2239,14 +2239,13 @@ function openBookingEditModal(bookingId) {
   document.getElementById('artwork-links-readonly-display').classList.add('hidden');
   document.getElementById('artwork-links-container').classList.remove('hidden');
   
-  // Populate brand dropdown FIRST so the value can be set correctly
-  populateBookingFormBrands();
+  // Populate brand dropdown and pre-select this booking's brand
+  // (must be done before setting other field values)
+  populateBookingFormBrands(b.brandName);
   populateCampaignSuggestions();
   
   document.getElementById('booking-modal-title').innerText = "รายละเอียดและแก้ไขการจอง";
   document.getElementById('booking-modal-id').value = b.id;
-  // Populate brand dropdown with THIS booking's brand pre-selected
-  populateBookingFormBrands(b.brandName);
   document.getElementById('booking-form-campaign').value = b.campaignName;
   
   // Make sure b.roomName exists as an option in the select dropdown (for historical / renamed rooms)
@@ -5660,29 +5659,34 @@ function populateFilterDropdowns() {
 
 function populateBookingFormBrands(targetValue) {
   const brandSelect = document.getElementById('booking-form-brand');
-  if (brandSelect) {
-    brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
-    const filteredBrands = (state.brands || []).filter(b => {
-      if (!state.currentUser) return false;
-      if (getUserRole() === 'master admin' || (state.currentUser.permissions && state.currentUser.permissions.isAdmin)) return true;
-      return b.owner && b.owner.toLowerCase() === state.currentUser.email.toLowerCase();
-    });
-    filteredBrands.forEach(b => {
-      brandSelect.innerHTML += `<option value="${b.name}">${b.name}</option>`;
-    });
-    
-    // If a specific value is requested (edit mode), ensure it's always an option
-    const valToSet = targetValue !== undefined ? targetValue : brandSelect.value;
-    if (valToSet) {
-      let found = false;
-      for (let i = 0; i < brandSelect.options.length; i++) {
-        if (brandSelect.options[i].value === valToSet) { found = true; break; }
-      }
-      if (!found && valToSet) {
-        brandSelect.innerHTML += `<option value="${valToSet}">${valToSet}</option>`;
-      }
-      brandSelect.value = valToSet;
+  if (!brandSelect) return;
+  
+  // Rebuild options list
+  brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
+  const filteredBrands = (state.brands || []).filter(brand => {
+    if (!state.currentUser) return false;
+    if (getUserRole() === 'master admin' || (state.currentUser.permissions && state.currentUser.permissions.isAdmin)) return true;
+    return brand.owner && brand.owner.toLowerCase() === state.currentUser.email.toLowerCase();
+  });
+  filteredBrands.forEach(brand => {
+    const opt = document.createElement('option');
+    opt.value = brand.name;
+    opt.textContent = brand.name;
+    brandSelect.appendChild(opt);
+  });
+  
+  // If a specific brand is requested (edit mode), ensure it's shown and selected
+  if (targetValue && targetValue.trim() !== '') {
+    const trimmed = targetValue.trim();
+    let found = Array.from(brandSelect.options).some(o => o.value === trimmed);
+    if (!found) {
+      // Brand not in user's filtered list — add it anyway so we can display it
+      const opt = document.createElement('option');
+      opt.value = trimmed;
+      opt.textContent = trimmed;
+      brandSelect.appendChild(opt);
     }
+    brandSelect.value = trimmed;
   }
 }
 
