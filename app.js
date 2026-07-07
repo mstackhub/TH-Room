@@ -2262,21 +2262,39 @@ function openBookingEditModal(bookingId) {
   populateCampaignSuggestions();
 
   // ── 7. Room dropdown ─────────────────────────────────────────────────────────
-  //   Ensure the booked room exists as an option (handles renamed rooms)
+  //   Rebuild room options from state.rooms (in case modal opens before rooms are ready)
   const roomSel = el('booking-form-room');
-  if (roomSel && b.roomName) {
-    const roomExists = Array.from(roomSel.options).some(o => o.value === b.roomName);
-    if (!roomExists) {
-      const opt = document.createElement('option');
-      opt.value = b.roomName;
-      opt.text  = b.roomName;
-      roomSel.add(opt);
+  if (roomSel) {
+    // Rebuild from state.rooms if available
+    if (state.rooms && state.rooms.length > 0) {
+      roomSel.innerHTML = `<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2b\u0e49\u0e2d\u0e07\u0e44\u0e25\u0e1f\u0e4c --</option>`;
+      state.rooms.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = `${r.name} (${r.description || ''})`.trim();
+        roomSel.appendChild(opt);
+      });
     }
-    roomSel.value = b.roomName;
+    // Ensure the booking's room is always an option (handles renamed/deleted rooms)
+    if (b.roomName) {
+      const roomExists = Array.from(roomSel.options).some(o => o.value === b.roomName);
+      if (!roomExists) {
+        const opt = document.createElement('option');
+        opt.value = b.roomName;
+        opt.textContent = b.roomName;
+        roomSel.appendChild(opt);
+      }
+      roomSel.value = b.roomName;
+    }
   }
 
   // ── 8. Date & times ──────────────────────────────────────────────────────────
-  el('booking-form-date').value       = b.date      || '';
+  //   Use setAttribute to force the value (bypasses Safari input[type=date] year-range validation)
+  const dateInput = el('booking-form-date');
+  if (dateInput && b.date) {
+    dateInput.setAttribute('value', b.date);
+    dateInput.value = b.date;
+  }
   el('booking-form-start-time').value = b.startTime || '00:00';
   el('booking-form-end-time').value   = b.endTime   || '00:30';
 
