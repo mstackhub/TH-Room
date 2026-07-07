@@ -2222,157 +2222,146 @@ function openBookingEditModal(bookingId) {
     showToast("กรุณารอสักครู่ กำลังทำการบันทึกข้อมูลหลักไปยังเซิร์ฟเวอร์", "warning");
     return;
   }
-  // Search across date-specific bookings, user bookings, and the global calendarBookings pool
-  const b = (state.bookings && state.bookings.find(x => x.id && x.id.toString() === bookingId.toString())) || 
-            (state.myBookings && state.myBookings.find(x => x.id && x.id.toString() === bookingId.toString())) ||
-            (state.calendarBookings && state.calendarBookings.find(x => x.id && x.id.toString() === bookingId.toString()));
-  if (!b) return;
-  
-  // Open the panel WITHOUT resetting the form (form.reset() would wipe the data we're about to fill)
+
+  // ── 1. Find the booking across all available pools ──────────────────────────
+  const idStr = bookingId ? bookingId.toString() : '';
+  const b = (state.bookings      && state.bookings.find(x      => x.id && x.id.toString() === idStr)) ||
+            (state.myBookings    && state.myBookings.find(x    => x.id && x.id.toString() === idStr)) ||
+            (state.calendarBookings && state.calendarBookings.find(x => x.id && x.id.toString() === idStr));
+
+  if (!b) {
+    showToast("ไม่พบข้อมูลการจองนี้", "error");
+    return;
+  }
+
+  // ── 2. Open the slide-in panel (no form.reset inside) ───────────────────────
   _openBookingModalPanel();
-  
-  // Reset error state and hidden UI elements
-  document.getElementById('booking-form-error').classList.add('hidden');
-  const conflictAlert = document.getElementById('booking-conflict-alert');
+
+  // ── 3. Reset UI flags (error/conflict banners, hidden areas) ────────────────
+  const el = id => document.getElementById(id);
+  el('booking-form-error').classList.add('hidden');
+  const conflictAlert = el('booking-conflict-alert');
   if (conflictAlert) conflictAlert.classList.add('hidden');
-  document.getElementById('booking-form-status-container').classList.add('hidden');
-  document.getElementById('artwork-links-readonly-display').classList.add('hidden');
-  document.getElementById('artwork-links-container').classList.remove('hidden');
-  
-  // Populate brand dropdown and pre-select this booking's brand
-  // (must be done before setting other field values)
+  el('booking-form-status-container').classList.add('hidden');
+  el('booking-form-owner-display').classList.add('hidden');
+  el('artwork-links-container').innerHTML = '';
+  el('artwork-links-readonly-display').innerHTML = '';
+  el('artwork-links-readonly-display').classList.add('hidden');
+  el('artwork-links-container').classList.remove('hidden');
+
+  // ── 4. Header / hidden ID ────────────────────────────────────────────────────
+  el('booking-modal-title').innerText = "รายละเอียดและแก้ไขการจอง";
+  el('booking-modal-id').value = b.id;
+
+  // ── 5. Brand dropdown ────────────────────────────────────────────────────────
+  //   Build options first then force-select the booking's brand
   populateBookingFormBrands(b.brandName);
+
+  // ── 6. Campaign name ─────────────────────────────────────────────────────────
+  el('booking-form-campaign').value = b.campaignName || '';
   populateCampaignSuggestions();
-  
-  document.getElementById('booking-modal-title').innerText = "รายละเอียดและแก้ไขการจอง";
-  document.getElementById('booking-modal-id').value = b.id;
-  document.getElementById('booking-form-campaign').value = b.campaignName;
-  
-  // Make sure b.roomName exists as an option in the select dropdown (for historical / renamed rooms)
-  const roomSelect = document.getElementById('booking-form-room');
-  if (roomSelect && b.roomName) {
-    let hasOption = false;
-    for (let i = 0; i < roomSelect.options.length; i++) {
-      if (roomSelect.options[i].value === b.roomName) {
-        hasOption = true;
-        break;
-      }
-    }
-    if (!hasOption) {
+
+  // ── 7. Room dropdown ─────────────────────────────────────────────────────────
+  //   Ensure the booked room exists as an option (handles renamed rooms)
+  const roomSel = el('booking-form-room');
+  if (roomSel && b.roomName) {
+    const roomExists = Array.from(roomSel.options).some(o => o.value === b.roomName);
+    if (!roomExists) {
       const opt = document.createElement('option');
       opt.value = b.roomName;
-      opt.text = b.roomName;
-      roomSelect.add(opt);
+      opt.text  = b.roomName;
+      roomSel.add(opt);
     }
+    roomSel.value = b.roomName;
   }
-  
-  document.getElementById('booking-form-room').value = b.roomName;
-  document.getElementById('booking-form-date').value = b.date;
-  document.getElementById('booking-form-start-time').value = b.startTime;
-  document.getElementById('booking-form-end-time').value = b.endTime;
-  document.getElementById('booking-form-remark').value = b.remark || "";
-  
-  // Load new fields
-  document.getElementById('booking-form-brief-text').value = b.briefText || "";
-  
-  // Check authorization: can edit if they have edit permission (or are master admin) or are the owner
-  const currentUserEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : '';
-  const isOwner = String(b.ownerEmail || '').toLowerCase() === String(currentUserEmail).toLowerCase();
-  const userRole = getUserRole();
-  const canEdit = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
-  const hasAccess = canEdit || isOwner;
-  
-  // LS Artwork Layout link processing
-  const container = document.getElementById('artwork-links-container');
-  const readonlyDisplay = document.getElementById('artwork-links-readonly-display');
-  container.innerHTML = "";
-  readonlyDisplay.innerHTML = "";
-  
+
+  // ── 8. Date & times ──────────────────────────────────────────────────────────
+  el('booking-form-date').value       = b.date      || '';
+  el('booking-form-start-time').value = b.startTime || '00:00';
+  el('booking-form-end-time').value   = b.endTime   || '00:30';
+
+  // ── 9. Brief Details ─────────────────────────────────────────────────────────
+  el('booking-form-brief-text').value = b.briefText || '';
+  el('booking-form-remark').value     = b.remark    || '';
+
+  // ── 10. LS Artwork / links ───────────────────────────────────────────────────
   let links = [];
   if (b.lsArtworkLayout) {
     try {
-      links = JSON.parse(b.lsArtworkLayout);
+      const parsed = JSON.parse(b.lsArtworkLayout);
+      links = Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      if (typeof b.lsArtworkLayout === 'string' && b.lsArtworkLayout.trim() !== '') {
-        links = [{ type: 'Other', url: b.lsArtworkLayout.trim() }];
-      }
+      const raw = typeof b.lsArtworkLayout === 'string' ? b.lsArtworkLayout.trim() : '';
+      if (raw) links = [{ type: 'Other', url: raw }];
     }
   }
 
-  const addBtn = document.getElementById('btn-add-artwork-link');
+  // ── 11. Permissions ──────────────────────────────────────────────────────────
+  const currentEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email.toLowerCase() : '';
+  const isOwner  = String(b.ownerEmail || '').toLowerCase() === currentEmail;
+  const userRole = getUserRole();
+  const canEdit  = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
+  const hasAccess = canEdit || isOwner;
+
+  const addBtn = el('btn-add-artwork-link');
+  const container     = el('artwork-links-container');
+  const readonlyDisp  = el('artwork-links-readonly-display');
+
   if (hasAccess) {
+    // Editable mode: show add-link button + editable link rows
     addBtn.classList.remove('hidden');
     container.classList.remove('hidden');
-    readonlyDisplay.classList.add('hidden');
-    
-    if (links.length > 0) {
-      links.forEach(link => {
-        addArtworkLinkRow(link.type, link.url);
-      });
-    }
+    readonlyDisp.classList.add('hidden');
+    links.forEach(link => addArtworkLinkRow(link.type, link.url));
   } else {
+    // Read-only mode: show link chips only
     addBtn.classList.add('hidden');
     container.classList.add('hidden');
-    readonlyDisplay.classList.remove('hidden');
-    
+    readonlyDisp.classList.remove('hidden');
     if (links.length > 0) {
       links.forEach(link => {
-        let typeColor = "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200";
-        let iconName = "link";
-        if (link.type === 'Google Drive') {
-          typeColor = "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200";
-          iconName = "hard-drive";
-        } else if (link.type === 'Canva') {
-          typeColor = "bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200";
-          iconName = "palette";
-        } else if (link.type === 'Google Sheet') {
-          typeColor = "bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200";
-          iconName = "table";
-        }
-        
-        readonlyDisplay.innerHTML += `
-          <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border ${typeColor} transition-all">
+        let typeColor = 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
+        let iconName  = 'link';
+        if (link.type === 'Google Drive')  { typeColor = 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'; iconName = 'hard-drive'; }
+        else if (link.type === 'Canva')    { typeColor = 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200';     iconName = 'palette'; }
+        else if (link.type === 'Google Sheet') { typeColor = 'bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200';      iconName = 'table'; }
+        readonlyDisp.innerHTML += `
+          <a href="${link.url}" target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border ${typeColor} transition-all">
             <i data-lucide="${iconName}" class="w-3.5 h-3.5"></i>
             <span>${link.type}: เปิดลิงก์</span>
             <i data-lucide="external-link" class="w-3 h-3 opacity-60"></i>
-          </a>
-        `;
+          </a>`;
       });
     } else {
-      readonlyDisplay.innerHTML = `<span class="text-xs text-slate-400 font-medium py-1">ไม่มีลิงก์ผลงานแนบไว้</span>`;
+      readonlyDisp.innerHTML = `<span class="text-xs text-slate-400 font-medium py-1">ไม่มีลิงก์ผลงานแนบไว้</span>`;
     }
     lucide.createIcons();
   }
-  
-  // Set status value silently but keep it hidden
-  const statusContainer = document.getElementById('booking-form-status-container');
-  statusContainer.classList.add('hidden');
-  document.getElementById('booking-form-status').value = b.status;
-  
-  // Display ownership
-  const ownerDisplay = document.getElementById('booking-form-owner-display');
-  ownerDisplay.classList.remove('hidden');
-  document.getElementById('booking-owner-name').innerText = b.ownerName || (b.ownerEmail ? b.ownerEmail.split('@')[0] : "ไม่ระบุ");
-  document.getElementById('booking-owner-email').innerText = b.ownerEmail || "ไม่ระบุ";
-  
-  // Display delete/cancel option
-  document.getElementById('btn-cancel-booking-action').classList.remove('hidden');
-  
-  const formElements = document.getElementById('booking-form').querySelectorAll('input, select, textarea');
-  formElements.forEach(el => {
-    if (el.id !== 'btn-save-booking') {
-      el.disabled = !hasAccess;
-    }
+
+  // ── 12. Status (hidden field) ────────────────────────────────────────────────
+  el('booking-form-status').value = b.status || 'Confirmed';
+
+  // ── 13. Owner info ───────────────────────────────────────────────────────────
+  el('booking-form-owner-display').classList.remove('hidden');
+  el('booking-owner-name').innerText  = b.ownerName  || (b.ownerEmail ? b.ownerEmail.split('@')[0] : 'ไม่ระบุ');
+  el('booking-owner-email').innerText = b.ownerEmail || 'ไม่ระบุ';
+
+  // ── 14. Form field enable/disable & save button ──────────────────────────────
+  document.getElementById('booking-form').querySelectorAll('input, select, textarea').forEach(f => {
+    f.disabled = !hasAccess;
   });
-  
-  const saveBtn = document.getElementById('btn-save-booking');
+
+  const saveBtn = el('btn-save-booking');
+  const cancelBtn = el('btn-cancel-booking-action');
   if (hasAccess) {
     saveBtn.classList.remove('hidden');
-    document.getElementById('btn-save-booking-text').innerText = "บันทึกการเปลี่ยนแปลง";
-    document.getElementById('btn-cancel-booking-action').classList.remove('hidden');
+    saveBtn.disabled = false;
+    el('btn-save-booking-text').innerText = "บันทึกการเปลี่ยนแปลง";
+    cancelBtn.classList.remove('hidden');
   } else {
     saveBtn.classList.add('hidden');
-    document.getElementById('btn-cancel-booking-action').classList.add('hidden');
+    cancelBtn.classList.add('hidden');
   }
 }
 
