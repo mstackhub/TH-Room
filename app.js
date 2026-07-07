@@ -2245,7 +2245,8 @@ function openBookingEditModal(bookingId) {
   
   document.getElementById('booking-modal-title').innerText = "รายละเอียดและแก้ไขการจอง";
   document.getElementById('booking-modal-id').value = b.id;
-  document.getElementById('booking-form-brand').value = b.brandName;
+  // Populate brand dropdown with THIS booking's brand pre-selected
+  populateBookingFormBrands(b.brandName);
   document.getElementById('booking-form-campaign').value = b.campaignName;
   
   // Make sure b.roomName exists as an option in the select dropdown (for historical / renamed rooms)
@@ -5657,10 +5658,9 @@ function populateFilterDropdowns() {
   }
 }
 
-function populateBookingFormBrands() {
+function populateBookingFormBrands(targetValue) {
   const brandSelect = document.getElementById('booking-form-brand');
   if (brandSelect) {
-    const oldVal = brandSelect.value;
     brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
     const filteredBrands = (state.brands || []).filter(b => {
       if (!state.currentUser) return false;
@@ -5670,8 +5670,18 @@ function populateBookingFormBrands() {
     filteredBrands.forEach(b => {
       brandSelect.innerHTML += `<option value="${b.name}">${b.name}</option>`;
     });
-    if (oldVal) {
-      brandSelect.value = oldVal;
+    
+    // If a specific value is requested (edit mode), ensure it's always an option
+    const valToSet = targetValue !== undefined ? targetValue : brandSelect.value;
+    if (valToSet) {
+      let found = false;
+      for (let i = 0; i < brandSelect.options.length; i++) {
+        if (brandSelect.options[i].value === valToSet) { found = true; break; }
+      }
+      if (!found && valToSet) {
+        brandSelect.innerHTML += `<option value="${valToSet}">${valToSet}</option>`;
+      }
+      brandSelect.value = valToSet;
     }
   }
 }
