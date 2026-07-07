@@ -32,6 +32,8 @@ let state = {
   calendarSelectedDate: new Date(),
   calendarBookings: [],
   filters: { room: '', brand: '', status: '', action: 'all' },
+  campaignSchedulePage: 1,
+  campaignSchedulePageSize: parseInt(localStorage.getItem('campaign_schedule_page_size')) || 10,
   analyticsStartDate: '',
   analyticsEndDate: '',
   // Track which tabs have already fetched data (prevents re-fetch on every tab switch)
@@ -6083,6 +6085,7 @@ function toggleCampaignScheduleAllDates() {
 }
 
 function filterCampaignSchedule() {
+  state.campaignSchedulePage = 1; // Reset to page 1 on filter changes
   renderCampaignSchedule();
 }
 
@@ -6303,11 +6306,28 @@ function renderCampaignSchedule() {
   // Store filtered list for exporting
   state.lastCampaignBookings = finalBookings;
 
-  // 6. Render table rows
+  // 6. Pagination Slicing
+  const totalItems = finalBookings.length;
+  const totalPages = Math.ceil(totalItems / state.campaignSchedulePageSize) || 1;
+  
+  if (state.campaignSchedulePage > totalPages) {
+    state.campaignSchedulePage = totalPages;
+  }
+  if (state.campaignSchedulePage < 1) {
+    state.campaignSchedulePage = 1;
+  }
+  
+  const startIdx = (state.campaignSchedulePage - 1) * state.campaignSchedulePageSize;
+  const endIdx = startIdx + state.campaignSchedulePageSize;
+  const pageBookings = finalBookings.slice(startIdx, endIdx);
+
+  // 7. Render table rows
   const tbody = document.getElementById('campaign-schedule-table-body');
   if (!tbody) return;
 
   if (finalBookings.length === 0) {
+    const pagContainer = document.getElementById('campaign-schedule-pagination-container');
+    if (pagContainer) pagContainer.innerHTML = '';
     const canCreate = state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking;
     tbody.innerHTML = `
       <tr>
@@ -6337,7 +6357,7 @@ function renderCampaignSchedule() {
   const todayDateStr = todayObj.getFullYear() + '-' + String(todayObj.getMonth() + 1).padStart(2, '0') + '-' + String(todayObj.getDate()).padStart(2, '0');
   const currentMins = todayObj.getHours() * 60 + todayObj.getMinutes();
 
-  finalBookings.forEach(b => {
+  pageBookings.forEach(b => {
     // Booking duration hours
     let durationHours = 0;
     if (b.startTime && b.endTime) {
@@ -6441,6 +6461,7 @@ function renderCampaignSchedule() {
   });
 
   lucide.createIcons();
+  renderCampaignSchedulePagination(totalItems, totalPages);
 }
 
 function escapeHtml(str) {
@@ -6530,4 +6551,83 @@ function exportCampaignScheduleToExcel() {
   document.body.removeChild(link);
   
   showToast("ดาวน์โหลดไฟล์ตารางงานแคมเปญสำเร็จ (CSV)", "success");
+}
+
+function renderCampaignSchedulePagination(totalItems, totalPages) {
+  const container = document.getElementById('campaign-schedule-pagination-container');
+  if (!container) return;
+  
+  if (totalItems === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  let pageButtonsHtml = '';
+  // Prev Button
+  const isFirstPage = state.campaignSchedulePage === 1;
+  pageButtonsHtml += `
+    <button onclick="changeCampaignSchedulePage(${state.campaignSchedulePage - 1})" ${isFirstPage ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold ${isFirstPage ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} transition-all flex items-center gap-1">
+      <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> ก่อนหน้า
+    </button>
+  `;
+  
+  // Page Numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isCurrent = p === state.campaignSchedulePage;
+    pageButtonsHtml += `
+      <button onclick="changeCampaignSchedulePage(${p})" class="w-8 h-8 rounded-lg text-xs font-bold transition-all ${isCurrent ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20 border border-brand-600' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-800'}">${p}</button>
+    `;
+  }
+  
+  // Next Button
+  const isLastPage = state.campaignSchedulePage === totalPages;
+  pageButtonsHtml += `
+    <button onclick="changeCampaignSchedulePage(${state.campaignSchedulePage + 1})" ${isLastPage ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold ${isLastPage ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} transition-all flex items-center gap-1">
+      ถัดไป <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+    </button>
+  `;
+  
+  const startRange = Math.min((state.campaignSchedulePage - 1) * state.campaignSchedulePageSize + 1, totalItems);
+  const endRange = Math.min(state.campaignSchedulePage * state.campaignSchedulePageSize, totalItems);
+  
+  container.innerHTML = `
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+      <!-- Left: Show entries count and selector -->
+      <div class="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+        <span>แสดง</span>
+        <select onchange="changeCampaignSchedulePageSize(this.value)" class="text-xs border border-slate-200 dark:border-slate-800 rounded px-2 py-1 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500">
+          <option value="10" ${state.campaignSchedulePageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="20" ${state.campaignSchedulePageSize === 20 ? 'selected' : ''}>20</option>
+          <option value="30" ${state.campaignSchedulePageSize === 30 ? 'selected' : ''}>30</option>
+          <option value="50" ${state.campaignSchedulePageSize === 50 ? 'selected' : ''}>50</option>
+        </select>
+        <span>รายการ จากทั้งหมด <strong class="text-slate-700 dark:text-slate-300">${totalItems}</strong> รายการ (กำลังแสดง ${startRange}-${endRange})</span>
+      </div>
+      
+      <!-- Right: Navigation buttons -->
+      <div class="flex items-center gap-1.5">
+        ${pageButtonsHtml}
+      </div>
+    </div>
+  `;
+  
+  lucide.createIcons({
+    attrs: {
+      class: ["lucide-icon"]
+    },
+    nameAttr: "data-lucide"
+  });
+}
+
+function changeCampaignSchedulePage(page) {
+  state.campaignSchedulePage = page;
+  renderCampaignSchedule();
+}
+
+function changeCampaignSchedulePageSize(size) {
+  const sizeInt = parseInt(size, 10);
+  state.campaignSchedulePageSize = sizeInt;
+  localStorage.setItem('campaign_schedule_page_size', sizeInt);
+  state.campaignSchedulePage = 1; // Reset to page 1
+  renderCampaignSchedule();
 }
