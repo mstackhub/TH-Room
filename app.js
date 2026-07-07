@@ -5784,28 +5784,38 @@ function populateBookingFormBrands(targetValue) {
 }
 
 function populateCampaignSuggestions() {
-  const datalist = document.getElementById('campaign-suggestions');
-  if (!datalist) return;
-  
-  const campaigns = new Set();
-  if (state.calendarBookings) {
-    state.calendarBookings.forEach(b => {
-      if (b.campaignName) campaigns.add(b.campaignName.trim());
-    });
+  try {
+    const datalist = document.getElementById('campaign-suggestions');
+    if (!datalist) return;
+    
+    const campaigns = new Set();
+    if (state.calendarBookings) {
+      state.calendarBookings.forEach(b => {
+        if (b.campaignName !== undefined && b.campaignName !== null) {
+          campaigns.add(String(b.campaignName).trim());
+        }
+      });
+    }
+    if (state.bookings) {
+      state.bookings.forEach(b => {
+        if (b.campaignName !== undefined && b.campaignName !== null) {
+          campaigns.add(String(b.campaignName).trim());
+        }
+      });
+    }
+    if (state.myBookings) {
+      state.myBookings.forEach(b => {
+        if (b.campaignName !== undefined && b.campaignName !== null) {
+          campaigns.add(String(b.campaignName).trim());
+        }
+      });
+    }
+    
+    const sorted = Array.from(campaigns).sort();
+    datalist.innerHTML = sorted.map(c => `<option value="${c}">`).join('');
+  } catch (err) {
+    console.error("Error in populateCampaignSuggestions:", err);
   }
-  if (state.bookings) {
-    state.bookings.forEach(b => {
-      if (b.campaignName) campaigns.add(b.campaignName.trim());
-    });
-  }
-  if (state.myBookings) {
-    state.myBookings.forEach(b => {
-      if (b.campaignName) campaigns.add(b.campaignName.trim());
-    });
-  }
-  
-  const sorted = Array.from(campaigns).sort();
-  datalist.innerHTML = sorted.map(c => `<option value="${c}">`).join('');
 }
 
 /**
