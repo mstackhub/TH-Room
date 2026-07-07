@@ -2173,9 +2173,7 @@ function openBookingModal() {
   document.getElementById('booking-form').reset();
   document.getElementById('booking-modal-id').value = "";
   document.getElementById('booking-form-error').classList.add('hidden');
-  populateBookingFormBrands();
-  populateCampaignSuggestions();
-  
+
   // Hide conflict warning initially
   const conflictAlert = document.getElementById('booking-conflict-alert');
   if (conflictAlert) conflictAlert.classList.add('hidden');
@@ -2183,51 +2181,54 @@ function openBookingModal() {
   document.getElementById('btn-cancel-booking-action').classList.add('hidden');
   document.getElementById('booking-form-status-container').classList.add('hidden');
   document.getElementById('booking-form-owner-display').classList.add('hidden');
-  
-  // Reset new fields
+
+  // Reset extra fields
   document.getElementById('booking-form-brief-text').value = "";
   document.getElementById('artwork-links-container').innerHTML = "";
   document.getElementById('artwork-links-readonly-display').innerHTML = "";
   document.getElementById('artwork-links-readonly-display').classList.add('hidden');
   document.getElementById('artwork-links-container').classList.remove('hidden');
   document.getElementById('btn-add-artwork-link').classList.remove('hidden');
-  
-  // Re-enable form fields
-  const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || getUserRole() === 'master admin';
-  const isViewer = !canCreate;
+
+  // --- STEP 1: ENABLE ALL FIELDS FIRST (so .value assignments below work) ---
   const formElements = document.getElementById('booking-form').querySelectorAll('input, select, textarea');
-  formElements.forEach(el => {
-    el.disabled = isViewer;
-  });
-  
-  const saveBtn = document.getElementById('btn-save-booking');
-  if (saveBtn) {
-    saveBtn.disabled = false;
-    if (isViewer) {
-      saveBtn.classList.add('hidden');
-    } else {
-      saveBtn.classList.remove('hidden');
-    }
-  }
-  
-  // Rebuild room dropdown from state.rooms (so grid-click pre-fill works correctly)
-  const roomSelModal = document.getElementById('booking-form-room');
-  if (roomSelModal && state.rooms && state.rooms.length > 0) {
-    roomSelModal.innerHTML = `<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2b\u0e49\u0e2d\u0e07\u0e44\u0e25\u0e1f\u0e4c --</option>`;
+  formElements.forEach(el => { el.disabled = false; });
+
+  // --- STEP 2: Populate dropdowns ---
+  populateBookingFormBrands();
+  populateCampaignSuggestions();
+
+  // Rebuild room dropdown from state.rooms
+  const roomSel = document.getElementById('booking-form-room');
+  if (roomSel && state.rooms && state.rooms.length > 0) {
+    roomSel.innerHTML = `<option value="">-- เลือกห้องไลฟ์ --</option>`;
     state.rooms.forEach(r => {
       const opt = document.createElement('option');
       opt.value = r.name;
       opt.textContent = `${r.name} (${r.description || ''})`.trim();
-      roomSelModal.appendChild(opt);
+      roomSel.appendChild(opt);
     });
   }
 
-  // Set default date (use setAttribute for Safari compatibility)
+  // --- STEP 3: Set default values (fields are enabled so .value works) ---
   const dateInput = document.getElementById('booking-form-date');
   if (dateInput && state.selectedDate) {
     dateInput.setAttribute('value', state.selectedDate);
     dateInput.value = state.selectedDate;
   }
+
+  // --- STEP 4: Apply permissions (disable if viewer) ---
+  const canCreate = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCreateBooking) || getUserRole() === 'master admin';
+  const isViewer = !canCreate;
+  formElements.forEach(el => { el.disabled = isViewer; });
+
+  const saveBtn = document.getElementById('btn-save-booking');
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    if (isViewer) saveBtn.classList.add('hidden');
+    else saveBtn.classList.remove('hidden');
+  }
+
   document.getElementById('btn-save-booking-text').innerText = "บันทึกการจอง";
 }
 
@@ -2308,12 +2309,17 @@ function openBookingEditModal(bookingId) {
   populateCampaignSuggestions();
 
   // ── 7. Room dropdown ─────────────────────────────────────────────────────────
-  //   Rebuild room options from state.rooms (in case modal opens before rooms are ready)
+  // IMPORTANT: Force-enable ALL fields FIRST before setting values
+  // (disabled fields ignore .value assignments — HTML spec behavior)
+  document.getElementById('booking-form').querySelectorAll('input, select, textarea').forEach(f => {
+    f.disabled = false;
+  });
+
+  //   Rebuild room options from state.rooms
   const roomSel = el('booking-form-room');
   if (roomSel) {
-    // Rebuild from state.rooms if available
     if (state.rooms && state.rooms.length > 0) {
-      roomSel.innerHTML = `<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2b\u0e49\u0e2d\u0e07\u0e44\u0e25\u0e1f\u0e4c --</option>`;
+      roomSel.innerHTML = `<option value="">-- เลือกห้องไลฟ์ --</option>`;
       state.rooms.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.name;
@@ -2321,7 +2327,6 @@ function openBookingEditModal(bookingId) {
         roomSel.appendChild(opt);
       });
     }
-    // Ensure the booking's room is always an option (handles renamed/deleted rooms)
     if (b.roomName) {
       const roomExists = Array.from(roomSel.options).some(o => o.value === b.roomName);
       if (!roomExists) {
@@ -2335,7 +2340,6 @@ function openBookingEditModal(bookingId) {
   }
 
   // ── 8. Date & times ──────────────────────────────────────────────────────────
-  //   Use setAttribute to force the value (bypasses Safari input[type=date] year-range validation)
   const dateInput = el('booking-form-date');
   if (dateInput && b.date) {
     dateInput.setAttribute('value', b.date);
