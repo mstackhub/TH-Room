@@ -343,10 +343,7 @@ function handleCustomLogin() {
       password: password
     };
     
-    const separator = GAS_API_URL.includes('?') ? '&' : '?';
-    const requestUrl = `${GAS_API_URL}${separator}action=login`;
-    
-    fetch(requestUrl, {
+    fetch(GAS_API_URL, {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',
@@ -3860,13 +3857,9 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
-  // Append a short action query parameter to survive potential redirects (keeps URL short to prevent 404)
-  const separator = GAS_API_URL.includes('?') ? '&' : '?';
-  const requestUrl = `${GAS_API_URL}${separator}action=${encodeURIComponent(action)}`;
-  
   // Use text/plain for simple CORS requests without triggering OPTIONS preflight.
   // Explicitly omit credentials to prevent Google from redirecting based on browser's active Google Account sessions.
-  fetch(requestUrl, {
+  fetch(GAS_API_URL, {
     method: 'POST',
     mode: 'cors',
     credentials: 'omit',
@@ -3955,7 +3948,7 @@ function showToast(message, type = "success") {
     dismissDelay = 15000; // Info/Notification: 15 seconds
   }
   
-  toast.className = `glass-modal p-4 rounded-xl border flex items-start gap-3 shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 w-full sm:w-[350px] relative ${bgClass}`;
+  toast.className = `glass-modal p-4 rounded-xl border flex items-start gap-3 shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 w-full sm:w-[350px] relative pointer-events-auto ${bgClass}`;
   
   toast.innerHTML = `
     <i data-lucide="${icon}" class="w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5"></i>
