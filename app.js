@@ -78,7 +78,7 @@ function detectAndNotifyNewBookings(oldArray, newArray) {
       const isMyBooking = state.currentUser && nb.ownerEmail && (nb.ownerEmail.toLowerCase() === state.currentUser.email.toLowerCase());
       if (!isMyBooking) {
         const ownerLabel = nb.ownerName || 'ผู้ใช้ท่านอื่น';
-        const msg = `คุณ ${ownerLabel} ได้ทำรายการจองห้อง ${nb.roomName} (${nb.startTime} - ${nb.endTime} น.)`;
+        const msg = `คุณ ${ownerLabel} ได้ทำรายการจองห้อง ${nb.roomName} วันที่ ${formatThaiDate(nb.date)} (${nb.startTime} - ${nb.endTime} น.)`;
         showToast(`🔔 ${msg}`, 'info');
         addNotification(msg, 'info');
       }
