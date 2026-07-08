@@ -5747,6 +5747,9 @@ function populateBookingFormBrands(targetValue) {
     const brandSelect = document.getElementById('booking-form-brand');
     if (!brandSelect) return;
     
+    // Remember current selection if any (to prevent background updates from wiping it out)
+    const currentValue = targetValue || brandSelect.value;
+    
     // Rebuild options list
     brandSelect.innerHTML = `<option value="">-- เลือกแบรนด์ --</option>`;
     const filteredBrands = (state.brands || []).filter(brand => {
@@ -5763,9 +5766,9 @@ function populateBookingFormBrands(targetValue) {
       brandSelect.appendChild(opt);
     });
     
-    // If a specific brand is requested (edit mode), ensure it's shown and selected
-    if (targetValue && targetValue.trim() !== '') {
-      const trimmed = targetValue.trim();
+    // Restore the selection if we had one
+    if (currentValue && currentValue.trim() !== '') {
+      const trimmed = currentValue.trim();
       let found = Array.from(brandSelect.options).some(o => o.value === trimmed);
       if (!found) {
         // Brand not in user's filtered list — add it anyway so we can display it
