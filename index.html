@@ -377,16 +377,16 @@
               <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
               <input type="search" id="my-bookings-search" placeholder="ค้นหาแคมเปญ / แบรนด์..." oninput="filterMyBookings()" class="w-full text-sm pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" autocomplete="off">
             </div>
-            <div class="flex gap-2 w-full sm:w-auto items-center">
-              <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <input type="date" id="my-bookings-filter-start-date" onchange="filterMyBookings()" class="text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer w-[125px] sm:w-[135px]">
-                <span class="text-slate-400 text-xs font-semibold">ถึง</span>
-                <input type="date" id="my-bookings-filter-end-date" onchange="filterMyBookings()" class="text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer w-[125px] sm:w-[135px]">
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+              <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 flex-1 sm:flex-initial min-w-0 justify-between">
+                <input type="date" id="my-bookings-filter-start-date" onchange="filterMyBookings()" class="text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer w-[95px] xs:w-[110px] sm:w-[135px]">
+                <span class="text-slate-400 text-[10px] sm:text-xs font-semibold">ถึง</span>
+                <input type="date" id="my-bookings-filter-end-date" onchange="filterMyBookings()" class="text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer w-[95px] xs:w-[110px] sm:w-[135px]">
               </div>
               <button onclick="clearMyBookingsDateFilter()" class="p-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-500 text-sm font-semibold transition-all flex items-center justify-center h-[38px] shrink-0" title="แสดงทุกวัน">
                 <i data-lucide="calendar-x" class="w-4 h-4"></i>
               </button>
-              <select id="my-bookings-filter-status" onchange="filterMyBookings()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 sm:flex-none">
+              <select id="my-bookings-filter-status" onchange="filterMyBookings()" class="text-xs sm:text-sm border border-slate-200 rounded-lg px-2.5 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 sm:flex-none min-w-[90px]">
                 <option value="All">ทุกสถานะ</option>
                 <option value="Confirmed">Confirmed (จองแล้ว)</option>
                 <option value="Completed">Completed (เสร็จสิ้น)</option>
@@ -1375,7 +1375,7 @@
   <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-32px)] sm:w-80 max-w-sm z-[99] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Main app script -->
-  <script src="app.js?v=1.6.4"></script>
+  <script src="app.js?v=1.6.5"></script>
 </body>
 </html>
 
