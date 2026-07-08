@@ -2405,14 +2405,18 @@ function openBookingEditModal(bookingId) {
   const currentEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email.toLowerCase() : '';
   const isOwner  = String(b.ownerEmail || '').toLowerCase() === currentEmail;
   const userRole = getUserRole();
-  const canEdit  = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
-  const hasAccess = canEdit || isOwner;
+  const isAdmin  = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.isAdmin) || userRole === 'master admin';
+  const userCanEdit = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canEditBooking) || userRole === 'master admin';
+  const userCanCancel = (state.currentUser && state.currentUser.permissions && state.currentUser.permissions.canCancelBooking) || userRole === 'master admin';
+
+  const hasEditAccess = isAdmin || (isOwner && userCanEdit);
+  const hasCancelAccess = isAdmin || (isOwner && userCanCancel);
 
   const addBtn = el('btn-add-artwork-link');
   const container     = el('artwork-links-container');
   const readonlyDisp  = el('artwork-links-readonly-display');
 
-  if (hasAccess) {
+  if (hasEditAccess) {
     // Editable mode: show add-link button + editable link rows
     addBtn.classList.remove('hidden');
     container.classList.remove('hidden');
@@ -2454,18 +2458,23 @@ function openBookingEditModal(bookingId) {
 
   // ── 14. Form field enable/disable & save button ──────────────────────────────
   document.getElementById('booking-form').querySelectorAll('input, select, textarea').forEach(f => {
-    f.disabled = !hasAccess;
+    f.disabled = !hasEditAccess;
   });
 
   const saveBtn = el('btn-save-booking');
   const cancelBtn = el('btn-cancel-booking-action');
-  if (hasAccess) {
+  
+  if (hasEditAccess) {
     saveBtn.classList.remove('hidden');
     saveBtn.disabled = false;
     el('btn-save-booking-text').innerText = "บันทึกการเปลี่ยนแปลง";
-    cancelBtn.classList.remove('hidden');
   } else {
     saveBtn.classList.add('hidden');
+  }
+
+  if (hasCancelAccess) {
+    cancelBtn.classList.remove('hidden');
+  } else {
     cancelBtn.classList.add('hidden');
   }
 }
