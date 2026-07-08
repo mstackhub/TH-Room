@@ -316,9 +316,14 @@ function handleCustomLogin() {
       password: password
     };
     
-    fetch(GAS_API_URL, {
+    const separator = GAS_API_URL.includes('?') ? '&' : '?';
+    const requestUrl = `${GAS_API_URL}${separator}action=login`;
+
+    // Explicitly omit credentials to prevent Google GFE from redirecting/blocking based on active browser Google accounts.
+    fetch(requestUrl, {
       method: 'POST',
       mode: 'cors',
+      credentials: 'omit',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
@@ -3844,10 +3849,24 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
+  // Append action and base64url-encoded token to query parameters to survive redirects.
+  // Use base64url (no +, /, = chars) so Google GFE never corrupts the redirect URL.
+  let url = GAS_API_URL || '';
+  const separator = url.includes('?') ? '&' : '?';
+  const queryParams = [`action=${encodeURIComponent(action)}`];
+  if (state.authToken) {
+    const urlSafeToken = btoa(state.authToken)
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    queryParams.push(`token=${urlSafeToken}`);
+  }
+  const requestUrl = `${url}${separator}${queryParams.join('&')}`;
+
   // Use text/plain for simple CORS requests without triggering OPTIONS preflight.
-  fetch(GAS_API_URL, {
+  // Explicitly omit credentials to prevent Google GFE from redirecting/blocking based on active browser Google accounts.
+  fetch(requestUrl, {
     method: 'POST',
     mode: 'cors',
+    credentials: 'omit',
     headers: {
       'Content-Type': 'text/plain;charset=utf-8'
     },
