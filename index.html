@@ -66,14 +66,8 @@
         </button>
       </form>
 
-      <!-- Developer/QA Settings for GAS URL -->
-      <div class="mt-8 pt-6 border-t border-slate-200 w-full text-center flex flex-col items-center gap-3">
-        <p class="text-xs text-slate-400">สำหรับจำลองระบบโดยไม่เชื่อมต่อจริง</p>
-        <div class="flex items-center gap-2">
-          <input type="checkbox" id="mock-connect-real-gas" checked class="rounded text-brand-500 focus:ring-brand-500 cursor-pointer">
-          <label for="mock-connect-real-gas" class="text-xs text-slate-500 cursor-pointer select-none">เชื่อมต่อ Google Sheets & Drive จริง</label>
-        </div>
-      </div>
+      <!-- Developer/QA Settings for GAS URL (Hidden in production) -->
+      <input type="checkbox" id="mock-connect-real-gas" checked class="hidden">
     </div>
   </div>
 
@@ -1381,7 +1375,7 @@
   <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-32px)] sm:w-80 max-w-sm z-[99] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Main app script -->
-  <script src="app.js?v=1.6.2"></script>
+  <script src="app.js?v=1.6.3"></script>
 </body>
 </html>
 
