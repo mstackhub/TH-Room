@@ -1091,7 +1091,8 @@ function cancelBooking(ss, user, bookingId) {
         startTime: formatTimeCell(data[i][5], ss),
         endTime: formatTimeCell(data[i][6], ss),
         ownerEmail: data[i][8],
-        status: data[i][10]
+        status: data[i][10],
+        lsArtworkLayout: data[i][14] || ""
       };
       break;
     }
@@ -1118,6 +1119,33 @@ function cancelBooking(ss, user, bookingId) {
   }
   
   sheet.getRange(rowIndex, 11).setValue("Cancelled");
+  
+  // Try to delete/trash Google Drive Folder associated with this booking
+  try {
+    var driveLink = getGoogleDriveLink(oldRecord.lsArtworkLayout);
+    if (driveLink) {
+      var folderId = null;
+      var match = driveLink.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+      if (match && match[1]) {
+        folderId = match[1];
+      } else {
+        match = driveLink.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+        if (match && match[1]) {
+          folderId = match[1];
+        }
+      }
+      
+      if (folderId) {
+        var folder = DriveApp.getFolderById(folderId);
+        if (folder) {
+          folder.setTrashed(true);
+          Logger.log("Successfully trashed Google Drive folder ID: " + folderId + " on booking cancellation");
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("Failed to delete Google Drive folder on cancelBooking: " + err.toString());
+  }
   
   SpreadsheetApp.flush(); // Flush spreadsheet changes immediately to avoid read-after-write delays
   
