@@ -1767,16 +1767,21 @@ function renderTimelineScheduler() {
       // Check if this booking is currently active (live)
       const isCurrentlyLive = (b.status === 'Confirmed' && isToday && currentTimeMins >= startMins && currentTimeMins <= endMins);
       
+      // Check if this booking has already ended (date in past or today and current time is past end time)
+      const isPastDay = (state.selectedDate < todayStr);
+      const isTodayPastTime = (state.selectedDate === todayStr && currentTimeMins > endMins);
+      const isEnded = (isPastDay || isTodayPastTime);
+      
       const barEl = document.createElement('div');
       
       // Color class
       let statusTheme = "status-confirmed";
-      if (isCurrentlyLive) {
-        statusTheme = "status-live";
-      } else if (b.status === "Completed") {
-        statusTheme = "status-completed";
-      } else if (b.status === "Cancelled") {
+      if (b.status === "Cancelled") {
         statusTheme = "status-cancelled";
+      } else if (isCurrentlyLive) {
+        statusTheme = "status-live";
+      } else if (isEnded || b.status === "Completed") {
+        statusTheme = "status-completed";
       }
       
       barEl.className = `booking-bar ${statusTheme}`;
