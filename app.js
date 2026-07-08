@@ -3743,9 +3743,13 @@ function handleUserSubmit(e) {
   const backup = [...state.allUsersAdmin];
 
   // Optimistic UI updates
+  let finalPassword = password;
   if (isEdit) {
+    const oldUser = state.allUsersAdmin.find(u => u.email.toLowerCase() === email.toLowerCase());
+    finalPassword = password || (oldUser ? oldUser.password : "");
+    payload.password = password; // Send empty to backend to signal no change
     state.allUsersAdmin = state.allUsersAdmin.map(u => 
-      u.email.toLowerCase() === email.toLowerCase() ? { email, password, name, role, status } : u
+      u.email.toLowerCase() === email.toLowerCase() ? { email, password: finalPassword, name, role, status } : u
     );
   } else {
     // Check duplicate email on add
@@ -3753,7 +3757,9 @@ function handleUserSubmit(e) {
       showToast("อีเมล/ชื่อผู้ใช้งานนี้มีอยู่ในระบบแล้ว!", "error");
       return;
     }
-    state.allUsersAdmin.push({ email, password, name, role, status });
+    finalPassword = password || "123456";
+    payload.password = finalPassword; // Send default to backend if empty
+    state.allUsersAdmin.push({ email, password: finalPassword, name, role, status });
   }
 
   // Update UI and Toast immediately
