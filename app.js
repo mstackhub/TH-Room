@@ -343,10 +343,7 @@ function handleCustomLogin() {
       password: password
     };
     
-    const separator = GAS_API_URL.includes('?') ? '&' : '?';
-    const requestUrl = `${GAS_API_URL}${separator}action=login`;
-    
-    fetch(requestUrl, {
+    fetch(GAS_API_URL, {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -3859,18 +3856,8 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
-  // Append action and base64-encoded token to query parameters to survive redirects (without GFE blocking colons)
-  let url = GAS_API_URL || '';
-  const separator = url.includes('?') ? '&' : '?';
-  const queryParams = [`action=${encodeURIComponent(action)}`];
-  if (state.authToken) {
-    const urlSafeToken = btoa(state.authToken);
-    queryParams.push(`token=${encodeURIComponent(urlSafeToken)}`);
-  }
-  const requestUrl = `${url}${separator}${queryParams.join('&')}`;
-  
   // Use text/plain for simple CORS requests without triggering OPTIONS preflight.
-  fetch(requestUrl, {
+  fetch(GAS_API_URL, {
     method: 'POST',
     mode: 'cors',
     headers: {
