@@ -193,6 +193,24 @@
             <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-600 text-sm font-bold shadow-inner hidden" id="user-avatar-container">
               U
             </div>
+            <!-- Notification Bell -->
+            <div class="relative">
+              <button onclick="toggleNotificationDropdown()" id="notification-btn" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-all relative" title="การแจ้งเตือน">
+                <i data-lucide="bell" class="w-5 h-5"></i>
+                <span id="notification-badge" class="hidden absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
+              </button>
+              <!-- Notification Dropdown -->
+              <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 py-2 max-h-96 overflow-y-auto">
+                <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200">การแจ้งเตือนล่าสุด</span>
+                  <button onclick="clearAllNotifications()" class="text-[10px] text-slate-400 hover:text-brand-500 font-bold hover:underline">ล้างทั้งหมด</button>
+                </div>
+                <div id="notification-list" class="divide-y divide-slate-100 dark:divide-slate-800/50">
+                  <div class="p-4 text-center text-xs text-slate-400">ไม่มีการแจ้งเตือนใหม่</div>
+                </div>
+              </div>
+            </div>
+
             <!-- Dark Mode Toggle -->
             <button onclick="toggleDarkMode()" id="dark-mode-btn" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-all" title="สลับโหมด มืด/สว่าง">
               <i data-lucide="moon" class="w-5 h-5"></i>
@@ -1365,7 +1383,7 @@
   <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-32px)] sm:w-80 max-w-sm z-[99] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Main app script -->
-  <script src="app.js?v=1.4.7"></script>
+  <script src="app.js?v=1.4.8"></script>
 </body>
 </html>
 

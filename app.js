@@ -78,7 +78,9 @@ function detectAndNotifyNewBookings(oldArray, newArray) {
       const isMyBooking = state.currentUser && nb.ownerEmail && (nb.ownerEmail.toLowerCase() === state.currentUser.email.toLowerCase());
       if (!isMyBooking) {
         const ownerLabel = nb.ownerName || 'ผู้ใช้ท่านอื่น';
-        showToast(`🔔 คุณ ${ownerLabel} ได้ทำรายการจองห้อง ${nb.roomName} (${nb.startTime} - ${nb.endTime} น.)`, 'info');
+        const msg = `คุณ ${ownerLabel} ได้ทำรายการจองห้อง ${nb.roomName} (${nb.startTime} - ${nb.endTime} น.)`;
+        showToast(`🔔 ${msg}`, 'info');
+        addNotification(msg, 'info');
       }
     }
   });
@@ -134,6 +136,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Load Lucide Icons
   lucide.createIcons();
+  
+  // Render notification bell status from cache
+  renderNotificationBell();
   
   // Render Mock UI Settings Button (Floating Gear to change GAS URL)
   createUrlSettingsButton();
@@ -440,6 +445,7 @@ function showAppShell() {
   
   // Apply sidebar/permission visibility using the dedicated function
   applySidebarPermissions();
+  renderNotificationBell();
 
   
   // Setup date picker default value
@@ -3915,47 +3921,186 @@ function showToast(message, type = "success") {
   let bgClass = "bg-white text-slate-800 border-slate-200";
   let icon = "check-circle";
   let iconColor = "text-emerald-500";
+  let dismissDelay = 5000; // Success/Default: 5 seconds
   
   if (type === "success") {
     bgClass = "bg-emerald-950 text-emerald-50 border-emerald-800 shadow-emerald-950/20";
     icon = "check-circle";
     iconColor = "text-emerald-400";
+    dismissDelay = 5000;
   } else if (type === "error") {
     bgClass = "bg-rose-950 text-rose-50 border-rose-800 shadow-rose-950/20";
     icon = "alert-triangle";
     iconColor = "text-rose-400";
+    dismissDelay = null; // Error: Stays open indefinitely until closed manually
   } else if (type === "warning") {
     bgClass = "bg-amber-950 text-amber-50 border-amber-800 shadow-amber-950/20";
     icon = "info";
     iconColor = "text-amber-400";
+    dismissDelay = 15000; // Warning: 15 seconds
   } else if (type === "info") {
     bgClass = "bg-indigo-950 text-indigo-50 border-indigo-800 shadow-indigo-950/20";
     icon = "bell";
     iconColor = "text-indigo-400";
+    dismissDelay = 15000; // Info/Notification: 15 seconds
   }
   
-  toast.className = `glass-modal p-4 rounded-xl border flex items-center gap-3 shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 ${bgClass}`;
+  toast.className = `glass-modal p-4 rounded-xl border flex items-start gap-3 shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 w-full sm:w-[350px] relative ${bgClass}`;
+  
   toast.innerHTML = `
-    <i data-lucide="${icon}" class="w-5 h-5 ${iconColor} flex-shrink-0"></i>
-    <span class="text-xs font-semibold leading-normal">${message}</span>
+    <i data-lucide="${icon}" class="w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5"></i>
+    <div class="flex-1 pr-6">
+      <span class="text-xs font-semibold leading-relaxed block">${message}</span>
+    </div>
+    <button type="button" class="toast-close-btn absolute top-3 right-3 text-slate-400 hover:text-slate-200 focus:outline-none p-0.5 rounded transition-all">
+      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+    </button>
   `;
   
   container.appendChild(toast);
   lucide.createIcons();
+  
+  // Close handler function
+  const closeToast = () => {
+    toast.classList.add('opacity-0', 'translate-y-[-10px]');
+    setTimeout(() => {
+      if (toast.parentNode === container) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  };
+  
+  // Bind close button click
+  toast.querySelector('.toast-close-btn').addEventListener('click', closeToast);
   
   // Animate Entrance
   setTimeout(() => {
     toast.classList.remove('translate-y-2', 'opacity-0');
   }, 10);
   
-  // Animate Exit
-  setTimeout(() => {
-    toast.classList.add('opacity-0', 'translate-y-[-10px]');
+  // Animate Exit if dismissDelay is set
+  if (dismissDelay !== null) {
     setTimeout(() => {
-      container.removeChild(toast);
-    }, 300);
-  }, 3500);
+      if (toast.parentNode === container) {
+        closeToast();
+      }
+    }, dismissDelay);
+  }
 }
+
+// ==================== PERSISTENT NOTIFICATION CENTER (BELL ICON) ====================
+state.notifications = JSON.parse(localStorage.getItem('notification_history') || '[]');
+
+function saveNotificationsToCache() {
+  try {
+    localStorage.setItem('notification_history', JSON.stringify(state.notifications));
+  } catch (e) {
+    console.error("Error saving notification history:", e);
+  }
+}
+
+function addNotification(message, type = 'info') {
+  const newNotif = {
+    id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+    message,
+    type,
+    timestamp: new Date().getTime(),
+    unread: true
+  };
+  
+  if (!state.notifications) state.notifications = [];
+  state.notifications.unshift(newNotif);
+  
+  // Prune logic: Keep only last 7 days and cap at 50 items
+  const sevenDaysAgo = new Date().getTime() - (7 * 24 * 60 * 60 * 1000);
+  state.notifications = state.notifications
+    .filter(n => n.timestamp >= sevenDaysAgo)
+    .slice(0, 50);
+    
+  saveNotificationsToCache();
+  renderNotificationBell();
+}
+
+function renderNotificationBell() {
+  const badge = document.getElementById('notification-badge');
+  const list = document.getElementById('notification-list');
+  if (!list) return;
+  
+  const unreadCount = (state.notifications || []).filter(n => n.unread).length;
+  
+  if (badge) {
+    if (unreadCount > 0) {
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+  
+  if (!state.notifications || state.notifications.length === 0) {
+    list.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">ไม่มีการแจ้งเตือนใหม่</div>`;
+    return;
+  }
+  
+  list.innerHTML = state.notifications.map(n => {
+    const timeText = formatRelativeTimeThai(n.timestamp);
+    let borderLeft = "border-l-indigo-500";
+    if (n.type === 'success') borderLeft = "border-l-emerald-500";
+    if (n.type === 'error') borderLeft = "border-l-rose-500";
+    if (n.type === 'warning') borderLeft = "border-l-amber-500";
+    
+    return `
+      <div class="p-3 border-l-4 ${borderLeft} ${n.unread ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''} text-xs transition-all hover:bg-slate-100/50 dark:hover:bg-slate-800/30 flex flex-col gap-1">
+        <div class="text-slate-700 dark:text-slate-350 leading-relaxed font-medium">${n.message}</div>
+        <div class="text-[10px] text-slate-400 flex justify-between items-center">
+          <span>${timeText}</span>
+          ${n.unread ? `<span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatRelativeTimeThai(timestamp) {
+  const diffMs = new Date().getTime() - timestamp;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'เมื่อครู่นี้';
+  if (diffMins < 60) return `เมื่อ ${diffMins} นาทีที่แล้ว`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `เมื่อ ${diffHours} ชั่วโมงที่แล้ว`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `เมื่อ ${diffDays} วันที่แล้ว`;
+}
+
+function toggleNotificationDropdown() {
+  const dropdown = document.getElementById('notification-dropdown');
+  if (!dropdown) return;
+  
+  const isHidden = dropdown.classList.toggle('hidden');
+  if (!isHidden) {
+    if (state.notifications) {
+      state.notifications.forEach(n => n.unread = false);
+      saveNotificationsToCache();
+      renderNotificationBell();
+    }
+  }
+}
+
+function clearAllNotifications() {
+  state.notifications = [];
+  saveNotificationsToCache();
+  renderNotificationBell();
+}
+
+// Add global listener to close notification dropdown when clicking outside
+window.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('notification-dropdown');
+  const btn = document.getElementById('notification-btn');
+  if (dropdown && btn && !dropdown.classList.contains('hidden')) {
+    if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  }
+});
 
 /**
  * UI loading overlays
