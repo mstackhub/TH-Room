@@ -1606,13 +1606,16 @@ function renderTimelineScheduler() {
   // Calculate active & booked rooms based on current time and selected date bookings
   const now = new Date();
   const currentTimeMins = now.getHours() * 60 + now.getMinutes();
+  const todayStr = getFormattedDate(now);
+  const isToday = (state.selectedDate === todayStr);
+
   let activeRoomsList = new Set();
   let bookedRoomsList = new Set();
   state.bookings.forEach(b => {
     if (b.status !== 'Cancelled') {
       bookedRoomsList.add(b.roomName);
     }
-    if (b.status === 'Confirmed') {
+    if (b.status === 'Confirmed' && isToday) {
       const startMins = parseTimeToMinutes(b.startTime);
       const endMins = parseTimeToMinutes(b.endTime);
       if (currentTimeMins >= startMins && currentTimeMins <= endMins) {
@@ -1655,7 +1658,7 @@ function renderTimelineScheduler() {
     // Room display cell with active status badge
     const isActive = activeRoomsList.has(room.name);
     const statusText = isActive 
-      ? `<span class="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100 w-fit mt-0.5 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>กำลังไลฟ์</span>` 
+      ? `<span class="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-100 w-fit mt-0.5 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Live Now</span>` 
       : `<span class="text-[10px] text-slate-400 font-medium">ความจุ: ${room.capacity} คน</span>`;
       
     roomsCol.innerHTML += `
@@ -1761,11 +1764,16 @@ function renderTimelineScheduler() {
       const leftPx = (clippedStart - startMinsLimit) * (CELL_WIDTH_PX / CELL_DURATION_MINS);
       const widthPx = (clippedEnd - clippedStart) * (CELL_WIDTH_PX / CELL_DURATION_MINS);
       
+      // Check if this booking is currently active (live)
+      const isCurrentlyLive = (b.status === 'Confirmed' && isToday && currentTimeMins >= startMins && currentTimeMins <= endMins);
+      
       const barEl = document.createElement('div');
       
       // Color class
       let statusTheme = "status-confirmed";
-      if (b.status === "Completed") {
+      if (isCurrentlyLive) {
+        statusTheme = "status-live";
+      } else if (b.status === "Completed") {
         statusTheme = "status-completed";
       } else if (b.status === "Cancelled") {
         statusTheme = "status-cancelled";

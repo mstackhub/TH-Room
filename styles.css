@@ -150,6 +150,16 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #dbeafe; /* Blue 100 */
 }
 
+/* Live: Red Accent */
+.status-live {
+  background-color: #fef2f2 !important; /* Red 50 */
+  border-left: 4px solid #ef4444 !important; /* Red 500 */
+  color: #991b1b !important; /* Red 800 */
+}
+.status-live:hover {
+  background-color: #fee2e2 !important; /* Red 100 */
+}
+
 /* Completed: Green Accent */
 .status-completed {
   background-color: #f0fdf4; /* Green 50 */
