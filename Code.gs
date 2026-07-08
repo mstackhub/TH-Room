@@ -296,7 +296,7 @@ function enforceAdmin(user) {
   }
   var role = String(user.role || '').trim().toLowerCase();
   if (role !== "master admin") {
-    throw new Error("Permission Denied: Master Admin privilege required.");
+    throw new Error("ขออภัย คุณไม่มีสิทธิ์ในการจัดการส่วนนี้ (ระบบจำกัดไว้สำหรับสิทธิ์ Master Admin เท่านั้น)");
   }
 }
 
@@ -829,7 +829,7 @@ function createBooking(ss, user, bData) {
     canCreate = false;
   }
   if (!canCreate) {
-    throw new Error("Permission Denied: Your account does not have permission to create bookings.");
+    throw new Error("ขออภัย บัญชีของคุณไม่มีสิทธิ์ในการสร้างรายการจอง");
   }
   
   // Validate input
@@ -976,7 +976,7 @@ function updateBooking(ss, user, bookingId, bData) {
     canEdit = false;
   }
   if (!canEdit) {
-    throw new Error("Permission Denied: Your account does not have permission to edit bookings.");
+    throw new Error("ขออภัย บัญชีของคุณไม่มีสิทธิ์ในการแก้ไขรายการจอง");
   }
   
   var isAdmin = user.permissions ? user.permissions.isAdmin : (role === "master admin");
@@ -1108,14 +1108,13 @@ function cancelBooking(ss, user, bookingId) {
     canCancel = false;
   }
   if (!canCancel) {
-    throw new Error("Permission Denied: Your account does not have permission to cancel bookings.");
+    throw new Error("ขออภัย บัญชีของคุณไม่มีสิทธิ์ในการยกเลิกรายการจอง");
   }
   
   var isAdmin = user.permissions ? user.permissions.isAdmin : (role === "master admin");
   
-  // Settle permissions
   if (!isAdmin && oldRecord.ownerEmail.toLowerCase() !== user.email.toLowerCase()) {
-    throw new Error("You do not have permission to cancel this booking.");
+    throw new Error("ขออภัย คุณไม่มีสิทธิ์ในการยกเลิกรายการจองของผู้อื่น");
   }
   
   sheet.getRange(rowIndex, 11).setValue("Cancelled");

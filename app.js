@@ -3910,7 +3910,10 @@ function apiCall(action, payload, callback) {
     if (data.success) {
       callback(null, data);
     } else {
-      callback(data.message || "Unknown error", null);
+      let errMsg = data.message || "Unknown error";
+      if (errMsg.startsWith("Error:")) errMsg = errMsg.substring(6).trim();
+      if (errMsg.startsWith("Exception:")) errMsg = errMsg.substring(10).trim();
+      callback(errMsg, null);
     }
   })
   .catch(err => {
