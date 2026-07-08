@@ -3802,8 +3802,17 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
+  // Append action and token as query parameters to survive Google redirects (POST -> GET method shift)
+  let url = GAS_API_URL || '';
+  const separator = url.includes('?') ? '&' : '?';
+  const queryParams = [`action=${encodeURIComponent(action)}`];
+  if (state.authToken) {
+    queryParams.push(`token=${encodeURIComponent(state.authToken)}`);
+  }
+  const requestUrl = `${url}${separator}${queryParams.join('&')}`;
+  
   // Use text/plain for simple CORS requests without triggering OPTIONS preflight
-  fetch(GAS_API_URL, {
+  fetch(requestUrl, {
     method: 'POST',
     mode: 'cors',
     headers: {
