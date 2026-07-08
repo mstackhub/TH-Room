@@ -3,7 +3,9 @@
  * File: app.js
  */
 
-let GAS_API_URL = localStorage.getItem('gas_api_url') || "https://script.google.com/macros/s/AKfycbyUm0c2LCXIS9b76TsTmD7mWVzAuILkGa4HJUbHfoUDBBRflfVXAV26TBSgUYAFoqtX/exec";
+const DEFAULT_GAS_API_URL = "https://script.google.com/macros/s/AKfycbyUm0c2LCXIS9b76TsTmD7mWVzAuILkGa4HJUbHfoUDBBRflfVXAV26TBSgUYAFoqtX/exec";
+localStorage.removeItem('gas_api_url');
+const GAS_API_URL = DEFAULT_GAS_API_URL;
 
 // Global error reporter to capture client-side runtime errors and display them as toasts
 window.addEventListener('error', (event) => {
@@ -140,8 +142,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Render notification bell status from cache
   renderNotificationBell();
   
-  // Render Mock UI Settings Button (Floating Gear to change GAS URL)
-  createUrlSettingsButton();
+  
   
   // Populate time dropdowns in booking modal
   populateTimeDropdowns();
@@ -241,35 +242,7 @@ function checkCachedSession() {
   }
 }
 
-/**
- * Create a UI helper to configure the Google App Script URL
- */
-function createUrlSettingsButton() {
-  const btn = document.createElement('button');
-  btn.className = "fixed bottom-6 left-6 z-[49] w-10 h-10 bg-slate-800 hover:bg-slate-700 text-white rounded-full flex items-center justify-center shadow-lg transition-all border border-slate-700";
-  btn.innerHTML = `<i data-lucide="settings" class="w-5 h-5"></i>`;
-  btn.onclick = () => {
-    const currentUrl = localStorage.getItem('gas_api_url') || "";
-    const newUrl = prompt("กรอก URL ของ Google App Script Web App (ถ้าปล่อยว่างจะใช้งานแบบจำลอง Mock Mode บนเครื่องนี้):", currentUrl);
-    if (newUrl !== null) {
-      localStorage.setItem('gas_api_url', newUrl.trim());
-      location.reload();
-    }
-  };
-  document.body.appendChild(btn);
-  lucide.createIcons();
-  
-  // Render Mock Mode Banner if running Mock Mode
-  if (state.isMockMode) {
-    const banner = document.createElement('div');
-    banner.className = "bg-amber-500 text-white text-center py-1 px-4 text-xs font-semibold select-none flex items-center justify-center gap-2 relative z-50";
-    banner.innerHTML = `
-      <span>⚠️ กำลังรันในโหมดจำลอง (Mock Mode) บนเครื่องของคุณ ข้อมูลถูกบันทึกใน Browser เท่านั้น</span>
-      <button onclick="localStorage.setItem('gas_api_url', prompt('กรอก App Script URL:') || ''); location.reload();" class="underline ml-2 bg-amber-600 px-2 py-0.5 rounded hover:bg-amber-700 transition-all">เชื่อมต่อ Google Sheets</button>
-    `;
-    document.body.insertBefore(banner, document.body.firstChild);
-  }
-}
+
 
 /**
  * Handle Custom Username / Password Login
