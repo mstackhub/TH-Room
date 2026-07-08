@@ -316,8 +316,17 @@ function handleCustomLogin() {
       password: password
     };
     
-    const separator = GAS_API_URL.includes('?') ? '&' : '?';
-    const requestUrl = `${GAS_API_URL}${separator}action=login`;
+    let requestUrl = GAS_API_URL;
+    let useProxy = false;
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      requestUrl = '/api/proxy';
+      useProxy = true;
+    }
+
+    if (!useProxy) {
+      const separator = GAS_API_URL.includes('?') ? '&' : '?';
+      requestUrl = `${GAS_API_URL}${separator}action=login`;
+    }
 
     // Explicitly omit credentials to prevent Google GFE from redirecting/blocking based on active browser Google accounts.
     fetch(requestUrl, {
@@ -3849,17 +3858,25 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
-  // Append action and base64url-encoded token to query parameters to survive redirects.
-  // Use base64url (no +, /, = chars) so Google GFE never corrupts the redirect URL.
-  let url = GAS_API_URL || '';
-  const separator = url.includes('?') ? '&' : '?';
-  const queryParams = [`action=${encodeURIComponent(action)}`];
-  if (state.authToken) {
-    const urlSafeToken = btoa(state.authToken)
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    queryParams.push(`token=${urlSafeToken}`);
+  let requestUrl = GAS_API_URL;
+  let useProxy = false;
+  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+    requestUrl = '/api/proxy';
+    useProxy = true;
   }
-  const requestUrl = `${url}${separator}${queryParams.join('&')}`;
+
+  if (!useProxy) {
+    // Append action and base64url-encoded token to query parameters to survive redirects (only when fetching GAS directly)
+    let url = GAS_API_URL || '';
+    const separator = url.includes('?') ? '&' : '?';
+    const queryParams = [`action=${encodeURIComponent(action)}`];
+    if (state.authToken) {
+      const urlSafeToken = btoa(state.authToken)
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      queryParams.push(`token=${urlSafeToken}`);
+    }
+    requestUrl = `${url}${separator}${queryParams.join('&')}`;
+  }
 
   // Use text/plain for simple CORS requests without triggering OPTIONS preflight.
   // Explicitly omit credentials to prevent Google GFE from redirecting/blocking based on active browser Google accounts.
