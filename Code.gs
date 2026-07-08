@@ -2548,7 +2548,11 @@ function verifyCustomToken(ss, token) {
   // If the token does not contain a colon, it's URL-encoded in base64 to survive redirects
   if (token.indexOf(":") === -1) {
     try {
-      var decodedBytes = Utilities.newBlob(Utilities.base64Decode(token)).getDataAsString();
+      var base64 = token.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      var decodedBytes = Utilities.newBlob(Utilities.base64Decode(base64)).getDataAsString();
       if (decodedBytes && decodedBytes.indexOf(":") !== -1) {
         decodedToken = decodedBytes;
       }

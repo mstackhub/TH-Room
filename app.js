@@ -3847,13 +3847,15 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
-  // Append action and base64-encoded token to query parameters to survive redirects (without GFE blocking colons)
+  // Append action and base64url-encoded token to query parameters to survive redirects.
+  // Use base64url (no +, /, = chars) so Google GFE never corrupts the redirect URL → avoids 404.
   let url = GAS_API_URL || '';
   const separator = url.includes('?') ? '&' : '?';
   const queryParams = [`action=${encodeURIComponent(action)}`];
   if (state.authToken) {
-    const urlSafeToken = btoa(state.authToken);
-    queryParams.push(`token=${encodeURIComponent(urlSafeToken)}`);
+    const urlSafeToken = btoa(state.authToken)
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    queryParams.push(`token=${urlSafeToken}`);
   }
   const requestUrl = `${url}${separator}${queryParams.join('&')}`;
   
