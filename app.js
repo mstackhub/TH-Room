@@ -3228,6 +3228,34 @@ function closeBrandModal() {
   document.getElementById('brand-modal').classList.add('hidden');
 }
 
+function getUpcomingBookingsForBrand(brandName) {
+  const pool = state.calendarBookings || [];
+  if (pool.length === 0) return [];
+  
+  const now = new Date();
+  const currentDateStr = getFormattedDate(now);
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  
+  const targetBrand = String(brandName || '').trim().toLowerCase();
+  
+  return pool.filter(b => {
+    if (b.status === 'Cancelled') return false;
+    const bBrand = String(b.brandName || '').trim().toLowerCase();
+    if (bBrand !== targetBrand) return false;
+    
+    // Future date
+    if (b.date > currentDateStr) return true;
+    
+    // Today but ends in the future
+    if (b.date === currentDateStr) {
+      const endMins = parseTimeToMinutes(b.endTime);
+      return endMins > currentMins;
+    }
+    
+    return false;
+  });
+}
+
 function handleBrandSubmit(e) {
   e.preventDefault();
   const id = document.getElementById('brand-form-id').value;
@@ -3235,6 +3263,17 @@ function handleBrandSubmit(e) {
   const status = document.getElementById('brand-form-status').value || "Active";
   const owner = document.getElementById('brand-form-owner').value || "";
   
+  // Conflicting bookings block for deactivation
+  if (id && status === "Inactive") {
+    const conflicts = getUpcomingBookingsForBrand(name);
+    if (conflicts.length > 0) {
+      const datesList = conflicts.slice(0, 3).map(c => `วันที่ ${formatThaiDate(c.date)} เวลา ${c.startTime}-${c.endTime} น.`).join('\n- ');
+      const moreText = conflicts.length > 3 ? `\n- ...และคิวจองอื่นๆ อีก ${conflicts.length - 3} รายการ` : '';
+      showToast(`ไม่สามารถปิดใช้งานแบรนด์ "${name}" ได้ เนื่องจากยังมีคิวจองที่กำลังจะถึง:\n- ${datesList}${moreText}`, "error");
+      return;
+    }
+  }
+
   // Duplicate check for Brands
   if (state.allBrandsAdmin && state.allBrandsAdmin.length > 0) {
     const isDuplicate = state.allBrandsAdmin.some(b => 
@@ -3284,6 +3323,15 @@ function handleBrandSubmit(e) {
 }
 
 function deleteBrandAdmin(id, name) {
+  // Conflicting bookings block for deletion
+  const conflicts = getUpcomingBookingsForBrand(name);
+  if (conflicts.length > 0) {
+    const datesList = conflicts.slice(0, 3).map(c => `วันที่ ${formatThaiDate(c.date)} เวลา ${c.startTime}-${c.endTime} น.`).join('\n- ');
+    const moreText = conflicts.length > 3 ? `\n- ...และคิวจองอื่นๆ อีก ${conflicts.length - 3} รายการ` : '';
+    showToast(`ไม่สามารถลบแบรนด์ "${name}" ได้ เนื่องจากยังมีคิวจองที่กำลังจะถึง:\n- ${datesList}${moreText}`, "error");
+    return;
+  }
+
   if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบแบรนด์ลูกค้า "${name}"? การดำเนินการนี้จะลบข้อมูลแบรนด์ออกจากระบบอย่างถาวร`)) {
     // Backup
     const backup = [...state.allBrandsAdmin];

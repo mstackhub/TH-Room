@@ -721,7 +721,8 @@ function hasPendingBookingsForBrandGS(ss, brandName) {
     var bBrandName = data[i][1];
     var bStatus = data[i][10];
     
-    if (bBrandName && bBrandName.toString().trim().toLowerCase() === brandName.toString().trim().toLowerCase() && bStatus === "Confirmed") {
+    // Any status except Cancelled is a booking block
+    if (bBrandName && bBrandName.toString().trim().toLowerCase() === brandName.toString().trim().toLowerCase() && bStatus !== "Cancelled") {
       var bDateStr;
       try {
         bDateStr = Utilities.formatDate(new Date(data[i][4]), timeZone, "yyyy-MM-dd");
