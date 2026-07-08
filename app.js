@@ -3360,6 +3360,8 @@ function renderRolesTable() {
   }
   
   state.allRoles.forEach(r => {
+    // Master Admin is a hidden superuser role — never shown in the UI
+    if (r.roleName.toLowerCase() === 'master admin') return;
     // Format allowed tabs cleanly
     const allowedList = (r.allowedTabs || "").split(',')
       .map(t => {
@@ -3579,13 +3581,15 @@ function populateUserRoleDropdown(selectedVal = "") {
     rolesList = [
       { roleName: "Viewer", description: "ดูได้อย่างเดียว" },
       { roleName: "Campaign Manager", description: "จอง/จัดการของตัวเอง" },
-      { roleName: "Admin", description: "ดูงานแคมเปญ & ลิงก์ไดรฟ์" },
-      { roleName: "Master Admin", description: "แอดมินสิทธิ์สูงสุด" }
+      { roleName: "Admin", description: "ดูงานแคมเปญ & ลิงก์ไดรฟ์" }
+      // Master Admin is intentionally omitted from fallback — hidden superuser
     ];
   }
   
   let html = "";
   rolesList.forEach(r => {
+    // Master Admin is a hidden superuser — never shown in role dropdown
+    if (r.roleName.toLowerCase() === 'master admin') return;
     const descText = r.description ? ` (${r.description})` : '';
     html += `<option value="${escapeHtml(r.roleName)}">${escapeHtml(r.roleName)}${escapeHtml(descText)}</option>`;
   });
@@ -3613,6 +3617,8 @@ function renderUsersTable() {
     return;
   }
   state.allUsersAdmin.forEach(u => {
+    // Master Admin users are hidden superusers — never shown in Users table
+    if (u.role && u.role.toLowerCase() === 'master admin') return;
     const isAct = u.status === "Active";
     tbody.innerHTML += `
       <tr class="hover:bg-slate-50/50">
