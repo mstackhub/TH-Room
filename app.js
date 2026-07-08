@@ -343,10 +343,12 @@ function handleCustomLogin() {
       password: password
     };
     
-    fetch(GAS_API_URL, {
+    const separator = GAS_API_URL.includes('?') ? '&' : '?';
+    const requestUrl = `${GAS_API_URL}${separator}action=login`;
+    
+    fetch(requestUrl, {
       method: 'POST',
       mode: 'cors',
-      credentials: 'omit',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
@@ -3857,12 +3859,20 @@ function apiCall(action, payload, callback) {
     ...payload
   };
   
+  // Append action and base64-encoded token to query parameters to survive redirects (without GFE blocking colons)
+  let url = GAS_API_URL || '';
+  const separator = url.includes('?') ? '&' : '?';
+  const queryParams = [`action=${encodeURIComponent(action)}`];
+  if (state.authToken) {
+    const urlSafeToken = btoa(state.authToken);
+    queryParams.push(`token=${encodeURIComponent(urlSafeToken)}`);
+  }
+  const requestUrl = `${url}${separator}${queryParams.join('&')}`;
+  
   // Use text/plain for simple CORS requests without triggering OPTIONS preflight.
-  // Explicitly omit credentials to prevent Google from redirecting based on browser's active Google Account sessions.
-  fetch(GAS_API_URL, {
+  fetch(requestUrl, {
     method: 'POST',
     mode: 'cors',
-    credentials: 'omit',
     headers: {
       'Content-Type': 'text/plain;charset=utf-8'
     },

@@ -2543,10 +2543,25 @@ function setUserPasswordInSheet(ss, email, password) {
  */
 function verifyCustomToken(ss, token) {
   if (!token) return null;
-  var parts = token.split(":");
-  if (parts.length !== 2) return null;
-  var email = parts[0];
-  var hash = parts[1];
+  
+  var decodedToken = token;
+  // If the token does not contain a colon, it's URL-encoded in base64 to survive redirects
+  if (token.indexOf(":") === -1) {
+    try {
+      var decodedBytes = Utilities.newBlob(Utilities.base64Decode(token)).getDataAsString();
+      if (decodedBytes && decodedBytes.indexOf(":") !== -1) {
+        decodedToken = decodedBytes;
+      }
+    } catch(e) {
+      // Keep as-is if decoding fails
+    }
+  }
+  
+  var parts = decodedToken.split(":");
+  if (parts.length < 2) return null;
+  
+  var hash = parts[parts.length - 1];
+  var email = parts.slice(0, parts.length - 1).join(":");
   
   var expectedHash = hashSHA256(email + getMasterPasswordHash(ss));
   if (hash === expectedHash) {
