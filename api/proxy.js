@@ -14,7 +14,7 @@ module.exports = function handler(req, res) {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
 
-  const gasUrl = "https://script.google.com/macros/s/AKfycbyUm0c2LCXIS9b76TsTmD7mWVzAuILkGa4HJUbHfoUDBBRflfVXAV26TBSgUYAFoqtX/exec";
+  const gasUrl = process.env.GAS_API_URL || "https://script.google.com/macros/s/AKfycbyUm0c2LCXIS9b76TsTmD7mWVzAuILkGa4HJUbHfoUDBBRflfVXAV26TBSgUYAFoqtX/exec";
 
   // Forward the request body to GAS
   let payload = "";
