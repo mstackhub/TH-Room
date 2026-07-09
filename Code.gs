@@ -29,17 +29,15 @@ function formatTimeCell(val, ss) {
   if (!val && val !== 0) return "";
   if (val instanceof Date) {
     var tz = getSpreadsheetTimeZoneCached(ss);
-    var yearStr = Utilities.formatDate(val, tz, "yyyy");
-    var monthStr = Utilities.formatDate(val, tz, "MM");
-    var dayStr = Utilities.formatDate(val, tz, "dd");
-    var hourStr = Utilities.formatDate(val, tz, "HH");
-    var minStr = Utilities.formatDate(val, tz, "mm");
+    // Combine yyyy, MM, dd, HH, mm formatting in a single call to save Apps Script API round-trips
+    var formatted = Utilities.formatDate(val, tz, "yyyy-MM-dd-HH-mm");
+    var parts = formatted.split("-");
     
-    var h = parseInt(hourStr, 10);
-    var m = parseInt(minStr, 10);
-    var y = parseInt(yearStr, 10);
-    var d = parseInt(dayStr, 10);
-    var mo = parseInt(monthStr, 10);
+    var y = parseInt(parts[0], 10);
+    var mo = parseInt(parts[1], 10);
+    var d = parseInt(parts[2], 10);
+    var h = parseInt(parts[3], 10);
+    var m = parseInt(parts[4], 10);
     
     // Google Sheets stores time relative to 1899-12-30.
     // If the year is 1899 or 1900, we check the day to handle durations/times that cross midnight (like 24:00)
