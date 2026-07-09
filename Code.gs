@@ -305,6 +305,16 @@ function enforceAdmin(user) {
  * Helper to fetch a role's permissions dynamically
  */
 function getRolePermissionsGS(ss, roleName) {
+  var roleLower = String(roleName || '').trim().toLowerCase();
+  
+  // --- CacheService: cache role permissions for 30 minutes (1800 sec) ---
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "role_permissions_" + roleLower.replace(/[^a-z0-9]/g, "_");
+  var cached = cache.get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
   var defaultPermissions = {
     roleName: roleName,
     description: "",
@@ -315,9 +325,6 @@ function getRolePermissionsGS(ss, roleName) {
     isAdmin: false
   };
   
-  var roleLower = String(roleName || '').trim().toLowerCase();
-  
-  // Fallback defaults if Roles sheet is not yet initialized
   if (roleLower === "master admin") {
     defaultPermissions.allowedTabs = "my-bookings,calendar,scheduler,campaign-schedule,analytics,rooms,brands,users,audit-log,settings,roles-mgmt";
     defaultPermissions.canCreateBooking = true;
@@ -336,7 +343,7 @@ function getRolePermissionsGS(ss, roleName) {
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (data[i][0].toString().toLowerCase().trim() === roleLower) {
-      return {
+      var perms = {
         roleName: data[i][0],
         description: data[i][1],
         allowedTabs: data[i][2],
@@ -345,9 +352,12 @@ function getRolePermissionsGS(ss, roleName) {
         canCancelBooking: String(data[i][5]).toUpperCase() === "TRUE",
         isAdmin: String(data[i][6]).toUpperCase() === "TRUE"
       };
+      cache.put(cacheKey, JSON.stringify(perms), 1800);
+      return perms;
     }
   }
   
+  cache.put(cacheKey, JSON.stringify(defaultPermissions), 1800);
   return defaultPermissions;
 }
 
@@ -557,7 +567,7 @@ function getBookings(ss, dateStr) {
     }
   }
   var result = { bookings: bookings, date: dateStr };
-  cache.put(cacheKey, JSON.stringify(result), 60); // cache 60 sec
+  cache.put(cacheKey, JSON.stringify(result), 1500); // cache 25 min
   return result;
 }
 
@@ -602,7 +612,7 @@ function getMyBookings(ss, email) {
     }
   }
   var result = { bookings: bookings };
-  cache.put(cacheKey, JSON.stringify(result), 30); // cache 30 sec
+  cache.put(cacheKey, JSON.stringify(result), 1500); // cache 25 min
   return result;
 }
 
@@ -646,7 +656,7 @@ function getAllBookings(ss) {
     }
   }
   var result = { bookings: bookings };
-  cache.put(cacheKey, JSON.stringify(result), 30);
+  cache.put(cacheKey, JSON.stringify(result), 1500);
   return result;
 }
 
@@ -1297,6 +1307,10 @@ function manageRoles(ss, adminUser, subAction, payload) {
       payload.isAdmin ? "TRUE" : "FALSE"
     ]);
     logActivity(ss, adminUser.email, adminUser.name, "ADD_ROLE", "-", "Role: " + newRoleName, "-", "-");
+    try {
+      var cache = CacheService.getScriptCache();
+      cache.remove("role_permissions_" + newRoleName.toLowerCase().replace(/[^a-z0-9]/g, "_"));
+    } catch(e) {}
     SpreadsheetApp.flush();
     return { success: true };
   }
@@ -1328,6 +1342,10 @@ function manageRoles(ss, adminUser, subAction, payload) {
     sheet.getRange(rowIndex, 2, 1, 6).setValues(rowValues);
     
     logActivity(ss, adminUser.email, adminUser.name, "EDIT_ROLE", "Role: " + targetRoleName, "Updated permissions", "-", "-");
+    try {
+      var cache = CacheService.getScriptCache();
+      cache.remove("role_permissions_" + targetRoleName.toLowerCase().replace(/[^a-z0-9]/g, "_"));
+    } catch(e) {}
     SpreadsheetApp.flush();
     return { success: true };
   }
@@ -1350,6 +1368,10 @@ function manageRoles(ss, adminUser, subAction, payload) {
     
     sheet.deleteRow(rowIndex);
     logActivity(ss, adminUser.email, adminUser.name, "DELETE_ROLE", "Role: " + targetRoleName, "-", "-", "-");
+    try {
+      var cache = CacheService.getScriptCache();
+      cache.remove("role_permissions_" + targetRoleName.toLowerCase().replace(/[^a-z0-9]/g, "_"));
+    } catch(e) {}
     SpreadsheetApp.flush();
     return { success: true };
   }
@@ -2508,12 +2530,14 @@ function loginUser(ss, email, password) {
     throw new Error("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
   }
   
-  // Auto-initialize if empty or missing admin
-  seedDefaultAdminIfNeeded(ss);
-  
   var user = getUserRecord(ss, email);
   if (!user) {
-    throw new Error("ไม่พบบัญชีผู้ใช้งานนี้ในระบบ. กรุณาตรวจสอบชื่อผู้ใช้งานในแผ่นงาน Users บน Google Sheets");
+    // Auto-initialize if empty or missing admin
+    seedDefaultAdminIfNeeded(ss);
+    user = getUserRecord(ss, email);
+    if (!user) {
+      throw new Error("ไม่พบบัญชีผู้ใช้งานนี้ในระบบ. กรุณาตรวจสอบชื่อผู้ใช้งานในแผ่นงาน Users บน Google Sheets");
+    }
   }
   
   if (user.status !== "Active") {
