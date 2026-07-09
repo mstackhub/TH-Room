@@ -3991,14 +3991,14 @@ function showToast(message, type = "success") {
     dismissDelay = 15000; // Info/Notification: 15 seconds
   }
   
-  toast.className = `glass-modal p-4 rounded-xl border flex items-start gap-3 shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 w-full sm:w-[350px] relative pointer-events-auto ${bgClass}`;
+  toast.className = `glass-modal p-4 rounded-xl border flex items-start gap-3 shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 w-full max-w-[calc(100vw-32px)] sm:max-w-sm relative pointer-events-auto ${bgClass}`;
   
   toast.innerHTML = `
     <i data-lucide="${icon}" class="w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5"></i>
-    <div class="flex-1 pr-6">
-      <span class="text-xs font-semibold leading-relaxed block">${message}</span>
+    <div class="flex-1 pr-4 min-w-0">
+      <span class="text-xs font-semibold leading-relaxed block break-words whitespace-pre-line">${message}</span>
     </div>
-    <button type="button" class="toast-close-btn absolute top-3 right-3 text-slate-400 hover:text-slate-200 focus:outline-none p-0.5 rounded transition-all">
+    <button type="button" class="toast-close-btn absolute top-3.5 right-3 text-slate-400 hover:text-slate-200 focus:outline-none p-0.5 rounded transition-all">
       <i data-lucide="x" class="w-3.5 h-3.5"></i>
     </button>
   `;

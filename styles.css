@@ -314,7 +314,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ==================== DARK MODE OVERRIDES ==================== */
 html.dark body {
-  background-color: #0f172a !important; /* Slate 900 */
+  background-color: #090d16 !important; /* Deep dark canvas */
   color: #e2e8f0 !important; /* Slate 200 */
 }
 
@@ -322,21 +322,33 @@ html.dark body {
 html.dark .bg-white,
 html.dark .kpi-card,
 html.dark header,
-html.dark select,
-html.dark input,
-html.dark textarea,
 html.dark .glass-panel,
 html.dark .modal-content,
-html.dark .bg-slate-50,
 html.dark .scheduler-rooms-col,
 html.dark .scheduler-timeline-col {
-  background-color: #1e293b !important; /* Slate 800 */
+  background-color: #151f30 !important; /* Premium dark blue-gray card */
   color: #f1f5f9 !important; /* Slate 100 */
-  border-color: #334155 !important; /* Slate 700 */
+  border-color: #223147 !important; /* Subtle dark border */
+}
+
+/* Form Controls with hollow dark design to stand out inside cards */
+html.dark select,
+html.dark input,
+html.dark textarea {
+  background-color: #0b0f19 !important; /* Dark hollow background */
+  color: #f1f5f9 !important;
+  border-color: #223147 !important;
+}
+
+/* Sub-elements / Table Headers / Zebra stripes background */
+html.dark .bg-slate-50 {
+  background-color: #0f172a !important; /* Dark slate */
+  color: #e2e8f0 !important;
+  border-color: #223147 !important;
 }
 
 html.dark select option {
-  background-color: #1e293b !important;
+  background-color: #151f30 !important;
   color: #f1f5f9 !important;
 }
 
@@ -345,7 +357,7 @@ html.dark .border-slate-200,
 html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
 html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
 html.dark .border-b {
-  border-color: #334155 !important;
+  border-color: #223147 !important;
 }
 
 /* Specific text color overrides */
@@ -601,8 +613,8 @@ html.dark .glass-panel input[type="date"],
 html.dark .glass-panel input[type="password"],
 html.dark .glass-panel select,
 html.dark .glass-panel textarea {
-  background-color: #1e293b !important; /* slate-800 */
-  border-color: #334155 !important; /* slate-700 */
+  background-color: #0b0f19 !important; /* Dark hollow background */
+  border-color: #223147 !important; /* Subtle dark border */
   color: #f1f5f9 !important; /* slate-100 */
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
 }
@@ -640,7 +652,7 @@ html.dark .glass-panel select:focus,
 html.dark .glass-panel textarea:focus {
   border-color: #3b82f6 !important; /* brand-500 */
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25) !important;
-  background-color: #1e293b !important;
+  background-color: #0b0f19 !important;
 }
 
 html.dark .glass-modal select,
