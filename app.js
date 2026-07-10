@@ -3962,6 +3962,36 @@ function decodeJwt(token) {
  */
 function showToast(message, type = "success") {
   const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  // De-duplicate errors to avoid spamming the user interface
+  if (type === "error") {
+    const existingToasts = Array.from(container.children);
+    
+    // Check for exact duplicate message
+    const isDuplicate = existingToasts.some(t => {
+      const span = t.querySelector('span');
+      return span && span.innerText.trim() === message.trim();
+    });
+    if (isDuplicate) return;
+
+    // Group general network/server connection errors together
+    const isNetworkError = message.includes("Failed to fetch") || 
+                           message.includes("เชื่อมต่อเซิร์ฟเวอร์หลังบ้านล้มเหลว") || 
+                           message.includes("HTTP Error") ||
+                           message.includes("NetworkError");
+    if (isNetworkError) {
+      const hasExistingNetworkError = existingToasts.some(t => {
+        const span = t.querySelector('span');
+        const text = span ? span.innerText : "";
+        return text.includes("Failed to fetch") || 
+               text.includes("เชื่อมต่อเซิร์ฟเวอร์หลังบ้านล้มเหลว") || 
+               text.includes("HTTP Error");
+      });
+      if (hasExistingNetworkError) return;
+    }
+  }
+
   const toast = document.createElement('div');
   
   let bgClass = "bg-white text-slate-800 border-slate-200";
