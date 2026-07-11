@@ -609,7 +609,11 @@ function applySidebarPermissions() {
 function fetchInitData(isSilent = false) {
   apiCall('getInitData', {}, (err, data) => {
     if (err) {
-      showToast("ไม่สามารถโหลดข้อมูลเริ่มต้นได้: " + err, "error");
+      if (!isSilent) {
+        showToast("ไม่สามารถโหลดข้อมูลเริ่มต้นได้: " + err, "error");
+      } else {
+        console.warn("Silent background update failed (network transient):", err);
+      }
       return;
     }
     if (data.user) {
@@ -637,6 +641,22 @@ function fetchInitData(isSilent = false) {
       state.tabLoaded['analytics'] = true;
       state.tabLoaded['campaign-schedule'] = true;
       
+      // Sync today's bookings directly from the newly updated allBookings pool to update KPIs instantly
+      const todayStr = getFormattedDate(new Date());
+      state.todayBookings = state.calendarBookings.filter(b => b.date === todayStr);
+      try {
+        localStorage.setItem('cached_today_bookings', JSON.stringify(state.todayBookings));
+      } catch (e) {}
+      
+      // Sync active scheduler bookings in memory for the currently selected date
+      if (state.selectedDate) {
+        state.bookings = state.calendarBookings.filter(b => b.date === state.selectedDate);
+        try {
+          localStorage.setItem('cached_scheduler_date', state.selectedDate);
+          localStorage.setItem('cached_scheduler_bookings', JSON.stringify(state.bookings));
+        } catch (e) {}
+      }
+
       // Sync myBookings locally from data.allBookings to make My Bookings render instantly
       if (state.currentUser && state.currentUser.email) {
         state.myBookings = state.calendarBookings.filter(b =>
@@ -651,6 +671,9 @@ function fetchInitData(isSilent = false) {
       try {
         localStorage.setItem('cached_calendar_bookings', JSON.stringify(state.calendarBookings));
       } catch (e) {}
+      
+      // Update KPIs based on the newly calculated todayBookings
+      updateKPIDashboard();
     }
     
     // Save to localStorage
@@ -826,44 +849,42 @@ function invalidateTabCache(...tabs) {
 
 function refreshActiveTabData(isSilent = false) {
   if (isSilent) {
+    // Single request polling: fetchInitData fetches everything and triggerActiveTabRender will update the view.
+    // This avoids parallel redundant calls to Google Apps Script.
     fetchInitData(true);
+    return;
   }
-  // Refresh today's bookings in the background to update KPIs
-  fetchTodayBookings(isSilent);
+
+  // Explicit user-triggered refresh: perform full backend reload
+  fetchInitData(false);
+  fetchTodayBookings(false);
 
   const tab = state.currentTab;
 
-  // When called silently (polling), always force-refresh
-  // When called explicitly (e.g. after write), also force-refresh
-  const forceRefresh = !isSilent; // non-silent means user-triggered, always refresh
-  // But for polling (isSilent=true), still refresh to pick up changes
-  // So in both cases we refresh — this function is only called when refresh IS needed.
-  // The "no re-fetch on tab switch" logic is in switchTab() below.
-
   if (tab === 'scheduler') {
-    fetchBookings(state.selectedDate, isSilent);
+    fetchBookings(state.selectedDate, false);
   } else if (tab === 'my-bookings') {
-    fetchMyBookings(isSilent);
+    fetchMyBookings(false);
   } else if (tab === 'calendar') {
-    loadCalendarView(isSilent);
+    loadCalendarView(false);
   } else if (tab === 'analytics') {
-    loadAnalyticsView(isSilent);
+    loadAnalyticsView(false);
   } else if (tab === 'campaign-schedule') {
-    loadCampaignScheduleView(isSilent);
+    loadCampaignScheduleView(false);
   } else if (tab === 'rooms') {
-    fetchRoomsAdmin(isSilent);
+    fetchRoomsAdmin(false);
   } else if (tab === 'brands') {
-    fetchBrandsAdmin(isSilent);
+    fetchBrandsAdmin(false);
   } else if (tab === 'users') {
-    fetchUsersAdmin(isSilent);
+    fetchUsersAdmin(false);
   } else if (tab === 'audit-log') {
     if (state.auditLogsUnlocked) {
-      fetchAuditLogs(isSilent);
+      fetchAuditLogs(false);
     }
   } else if (tab === 'settings') {
-    loadSettingsTab(isSilent);
+    loadSettingsTab(false);
   } else if (tab === 'roles-mgmt') {
-    fetchRolesAdmin(isSilent, true);
+    fetchRolesAdmin(false, true);
   }
 }
 
