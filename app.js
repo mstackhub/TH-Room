@@ -609,11 +609,7 @@ function applySidebarPermissions() {
 function fetchInitData(isSilent = false) {
   apiCall('getInitData', {}, (err, data) => {
     if (err) {
-      if (!isSilent) {
-        showToast("ไม่สามารถโหลดข้อมูลเริ่มต้นได้: " + err, "error");
-      } else {
-        console.warn("Silent background update failed (network transient):", err);
-      }
+      console.warn("ไม่สามารถโหลดข้อมูลเริ่มต้นได้ (Network/Server error):", err);
       return;
     }
     if (data.user) {
@@ -925,7 +921,7 @@ function fetchBookings(dateStr, isSilent = false) {
   apiCall('getBookings', { date: dateStr }, (err, data) => {
     if (!silentMode) showTimelineShimmer(false);
     if (err) {
-      showToast("ไม่สามารถโหลดข้อมูลการจอง: " + err, "error");
+      console.warn("ไม่สามารถโหลดข้อมูลการจอง (Network/Server error):", err);
       return;
     }
     detectAndNotifyNewBookings(state.bookings, data.bookings);
@@ -1023,7 +1019,7 @@ function fetchMyBookings(isSilent = false) {
   
   apiCall('getMyBookings', {}, (err, data) => {
     if (err) {
-      showToast("ไม่สามารถเรียกดูประวัติของฉันได้: " + err, "error");
+      console.warn("ไม่สามารถเรียกดูประวัติของฉันได้ (Network/Server error):", err);
       return;
     }
     state.myBookings = mergeServerBookings(state.myBookings, data.bookings);
@@ -4898,7 +4894,7 @@ function loadCalendarView(isSilent = false) {
   
   apiCall('getAllBookings', {}, (err, data) => {
     if (err) {
-      showToast("ไม่สามารถดึงข้อมูลคิวจองปฏิทินได้: " + err, "error");
+      console.warn("ไม่สามารถดึงข้อมูลคิวจองปฏิทินได้ (Network/Server error):", err);
       return;
     }
     
@@ -5753,7 +5749,7 @@ function loadAnalyticsView(isSilent = false) {
   
   apiCall('getAllBookings', {}, (err, data) => {
     if (err) {
-      showToast("ไม่สามารถเรียกดูข้อมูลสถิติได้: " + err, "error");
+      console.warn("ไม่สามารถเรียกดูข้อมูลสถิติได้ (Network/Server error):", err);
       return;
     }
     
@@ -6236,7 +6232,7 @@ function loadSettingsTab(isSilent = false) {
     document.getElementById('settings-frontend-url').placeholder = "เช่น https://xxxx.netlify.app";
 
     if (err) {
-      showToast("ไม่สามารถโหลดข้อมูลการตั้งค่า: " + err, "error");
+      console.warn("ไม่สามารถโหลดข้อมูลการตั้งค่า (Network/Server error):", err);
       return;
     }
     
@@ -6493,7 +6489,7 @@ function loadCampaignScheduleView(isSilent = false) {
 
   apiCall('getAllBookings', {}, (err, data) => {
     if (err) {
-      showToast("ไม่สามารถดึงข้อมูลคิวจองได้: " + err, "error");
+      console.warn("ไม่สามารถดึงข้อมูลคิวจองได้ (Network/Server error):", err);
       return;
     }
     
