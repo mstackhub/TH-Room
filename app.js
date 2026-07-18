@@ -1753,7 +1753,7 @@ function renderTimelineScheduler() {
     
     roomBookings.forEach(b => {
       // Apply filters
-      if (state.filters.brand && b.brandName !== state.filters.brand) {
+      if (state.filters.brand && state.filters.brand.length > 0 && !state.filters.brand.includes(b.brandName)) {
         return;
       }
       if (state.filters.status && b.status !== state.filters.status) {
@@ -2430,14 +2430,17 @@ function openBookingEditModal(bookingId) {
   const container     = el('artwork-links-container');
   const readonlyDisp  = el('artwork-links-readonly-display');
 
-  if (hasEditAccess) {
-    // Editable mode: show add-link button + editable link rows
+  // If user is logged in, they can always edit/add artwork links directly (e.g. Graphic Designers)
+  const isLoggedIn = !!state.currentUser;
+  
+  if (isLoggedIn) {
+    // Editable mode for artwork links
     addBtn.classList.remove('hidden');
     container.classList.remove('hidden');
     readonlyDisp.classList.add('hidden');
     links.forEach(link => addArtworkLinkRow(link.type, link.url));
   } else {
-    // Read-only mode: show link chips only
+    // Read-only mode
     addBtn.classList.add('hidden');
     container.classList.add('hidden');
     readonlyDisp.classList.remove('hidden');
@@ -2475,15 +2478,31 @@ function openBookingEditModal(bookingId) {
     f.disabled = !hasEditAccess;
   });
 
+  // Force-enable only the artwork links inputs and buttons if logged in
+  if (isLoggedIn) {
+    container.querySelectorAll('input, select, button').forEach(f => {
+      f.disabled = false;
+    });
+    addBtn.disabled = false;
+  }
+
   const saveBtn = el('btn-save-booking');
+  const saveArtworkOnlyBtn = el('btn-save-artwork-only');
   const cancelBtn = el('btn-cancel-booking-action');
   
   if (hasEditAccess) {
     saveBtn.classList.remove('hidden');
     saveBtn.disabled = false;
+    saveArtworkOnlyBtn.classList.add('hidden');
     el('btn-save-booking-text').innerText = "บันทึกการเปลี่ยนแปลง";
   } else {
     saveBtn.classList.add('hidden');
+    if (isLoggedIn) {
+      saveArtworkOnlyBtn.classList.remove('hidden');
+      saveArtworkOnlyBtn.disabled = false;
+    } else {
+      saveArtworkOnlyBtn.classList.add('hidden');
+    }
   }
 
   if (hasCancelAccess) {
@@ -2491,6 +2510,48 @@ function openBookingEditModal(bookingId) {
   } else {
     cancelBtn.classList.add('hidden');
   }
+}
+
+/**
+ * Direct Graphic Links update for designers (skips full booking write)
+ */
+function updateArtworkLinksOnly() {
+  const bookingId = document.getElementById('booking-modal-id').value;
+  if (!bookingId) return;
+
+  const lsArtworkLayout = JSON.stringify(getArtworkLinksFromForm());
+  
+  // Close modal immediately to feel instant
+  closeBookingModal();
+  showToast("กำลังบันทึกลิงก์ผลงานไปยังหลังบ้าน...", "info");
+
+  apiCall('updateArtworkLinks', { bookingId, artworkLinks: lsArtworkLayout }, (err, data) => {
+    if (err) {
+      showToast("เกิดข้อผิดพลาดในการบันทึกลิงก์ผลงาน: " + err, "error");
+    } else {
+      showToast("อัปเดตลิงก์ผลงานกราฟิกสำเร็จ", "success");
+      
+      // Update in-memory arrays
+      [state.calendarBookings, state.myBookings, state.bookings].forEach(arr => {
+        if (arr) {
+          const idx = arr.findIndex(x => x.id && x.id.toString() === bookingId.toString());
+          if (idx !== -1) {
+            arr[idx].lsArtworkLayout = lsArtworkLayout;
+          }
+        }
+      });
+      
+      // Update localStorage cache
+      try {
+        if (state.bookings) localStorage.setItem('cached_scheduler_bookings', JSON.stringify(state.bookings));
+        if (state.myBookings) localStorage.setItem('cached_my_bookings', JSON.stringify(state.myBookings));
+        if (state.calendarBookings) localStorage.setItem('cached_calendar_bookings', JSON.stringify(state.calendarBookings));
+      } catch (e) {}
+      
+      // Instant re-render active tab
+      _rerenderTab(state.currentTab);
+    }
+  });
 }
 
 /**
@@ -5164,7 +5225,7 @@ function createCalendarDayNode(dayNum, dateStr, isOtherMonth) {
   const dayBookings = state.calendarBookings.filter(b => {
     if (b.date !== dateStr || b.status === 'Cancelled') return false;
     if (state.filters.room && b.roomName !== state.filters.room) return false;
-    if (state.filters.brand && b.brandName !== state.filters.brand) return false;
+    if (state.filters.brand && state.filters.brand.length > 0 && !state.filters.brand.includes(b.brandName)) return false;
     if (state.filters.status && b.status !== state.filters.status) return false;
     return true;
   });
@@ -5276,7 +5337,7 @@ function renderWeekView() {
     const dayBookings = state.calendarBookings.filter(b => {
       if (b.date !== dateStr || b.status === 'Cancelled') return false;
       if (state.filters.room && b.roomName !== state.filters.room) return false;
-      if (state.filters.brand && b.brandName !== state.filters.brand) return false;
+      if (state.filters.brand && state.filters.brand.length > 0 && !state.filters.brand.includes(b.brandName)) return false;
       if (state.filters.status && b.status !== state.filters.status) return false;
       return true;
     });
@@ -5383,7 +5444,7 @@ function renderDayView() {
   const dayBookings = state.calendarBookings.filter(b => {
     if (b.date !== dateStr || b.status === 'Cancelled') return false;
     if (state.filters.room && b.roomName !== state.filters.room) return false;
-    if (state.filters.brand && b.brandName !== state.filters.brand) return false;
+    if (state.filters.brand && state.filters.brand.length > 0 && !state.filters.brand.includes(b.brandName)) return false;
     if (state.filters.status && b.status !== state.filters.status) return false;
     return true;
   });
@@ -6017,6 +6078,17 @@ function populateFilterDropdowns() {
     el.value = currentVal;
   });
 
+  // Initialize Custom Multi-select Dropdown for brand filters
+  initMultiSelectDropdown('scheduler-filter-brand', 'ทุกแบรนด์', (selectedBrands) => {
+    syncMultiSelectFilters('brand', selectedBrands);
+    renderTimelineScheduler();
+  });
+  
+  initMultiSelectDropdown('calendar-filter-brand', 'ทุกแบรนด์', (selectedBrands) => {
+    syncMultiSelectFilters('brand', selectedBrands);
+    renderCalendarGrid();
+  });
+
   // Also sync status dropdown values
   const schedulerStatus = document.getElementById('scheduler-filter-status');
   if (schedulerStatus) {
@@ -6603,6 +6675,10 @@ function renderCampaignSchedule() {
       } else {
         brandDropdown.value = 'All';
       }
+      
+      initMultiSelectDropdown('campaign-schedule-filter-brand', 'ทุกแบรนด์', () => {
+        filterCampaignSchedule();
+      });
     }
 
     if (state.lastCampaignOwnersKey !== activeOwnersKey) {
@@ -6622,7 +6698,7 @@ function renderCampaignSchedule() {
   }
 
   const selectedRoom = roomDropdown ? roomDropdown.value : 'All';
-  const selectedBrand = brandDropdown ? brandDropdown.value : 'All';
+  const selectedBrand = getMultiSelectValues('campaign-schedule-filter-brand');
   const selectedOwner = ownerDropdown ? ownerDropdown.value : 'All';
   const selectedStatus = document.getElementById('campaign-schedule-filter-status').value;
   const sortVal = document.getElementById('campaign-schedule-sort').value;
@@ -6673,8 +6749,8 @@ function renderCampaignSchedule() {
     finalBookings = finalBookings.filter(b => b.roomName === selectedRoom);
   }
 
-  if (selectedBrand && selectedBrand !== 'All') {
-    finalBookings = finalBookings.filter(b => b.brandName === selectedBrand);
+  if (selectedBrand && selectedBrand.length > 0) {
+    finalBookings = finalBookings.filter(b => selectedBrand.includes(b.brandName));
   }
   if (selectedOwner && selectedOwner !== 'All') {
     finalBookings = finalBookings.filter(b => b.ownerName === selectedOwner);
@@ -7072,4 +7148,522 @@ function changeCampaignSchedulePageSize(size) {
   localStorage.setItem('campaign_schedule_page_size', sizeInt);
   state.campaignSchedulePage = 1; // Reset to page 1
   renderCampaignSchedule();
+}
+
+/**
+ * Premium Multi-Select Dropdown Widget for Brand Filters
+ */
+function initMultiSelectDropdown(selectId, placeholder, onChange) {
+  const originalSelect = document.getElementById(selectId);
+  if (!originalSelect) return;
+
+  // Hide the original select
+  originalSelect.style.display = 'none';
+
+  // Check if our custom dropdown container already exists next to it
+  const customId = selectId + '-multi';
+  let customContainer = document.getElementById(customId);
+  if (customContainer) {
+    // Rebuild options on re-populate
+    rebuildOptions(customContainer, originalSelect, placeholder, onChange);
+    return;
+  }
+
+  // Create custom container
+  customContainer = document.createElement('div');
+  customContainer.id = customId;
+  customContainer.className = "relative w-full sm:w-48 select-none";
+  
+  // Insert next to original select
+  originalSelect.parentNode.insertBefore(customContainer, originalSelect.nextSibling);
+  
+  rebuildOptions(customContainer, originalSelect, placeholder, onChange);
+}
+
+function rebuildOptions(customContainer, originalSelect, placeholder, onChange) {
+  const options = Array.from(originalSelect.options).filter(o => o.value !== '' && o.value !== 'All');
+  
+  // Keep list of currently checked values on this selector container context
+  let selectedValues = customContainer.selectedValues || [];
+
+  customContainer.innerHTML = `
+    <button type="button" class="multi-select-trigger flex items-center justify-between w-full text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-950 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium transition-all">
+      <span class="multi-select-label truncate text-left w-full text-slate-400">${placeholder}</span>
+      <i data-lucide="chevron-down" class="w-4 h-4 opacity-60 ml-2"></i>
+    </button>
+    <div class="multi-select-panel hidden absolute left-0 mt-1 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-50 flex flex-col gap-1.5 w-64 max-h-72">
+      <input type="text" placeholder="ค้นหาแบรนด์..." class="multi-select-search text-xs border border-slate-200 dark:border-slate-800 rounded-md px-2 py-1 bg-slate-50 dark:bg-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full mb-1">
+      <div class="flex items-center gap-2 p-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded cursor-pointer select-all-row">
+        <input type="checkbox" class="multi-select-all w-3.5 h-3.5 text-brand-600 rounded border-slate-350 dark:border-slate-700">
+        <span class="text-xs text-slate-700 dark:text-slate-300 font-bold">เลือกทั้งหมด (Select All)</span>
+      </div>
+      <div class="multi-select-options flex flex-col gap-1 overflow-y-auto pr-1 flex-1 max-h-48">
+        ${options.map(opt => `
+          <div class="flex items-center gap-2 p-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded cursor-pointer option-row" data-value="${escapeHtml(opt.value)}">
+            <input type="checkbox" value="${escapeHtml(opt.value)}" class="multi-select-opt w-3.5 h-3.5 text-brand-600 rounded border-slate-350 dark:border-slate-700">
+            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHtml(opt.text)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  lucide.createIcons();
+
+  const trigger = customContainer.querySelector('.multi-select-trigger');
+  const panel = customContainer.querySelector('.multi-select-panel');
+  const search = customContainer.querySelector('.multi-select-search');
+  const selectAllCheckbox = customContainer.querySelector('.multi-select-all');
+  const selectAllRow = customContainer.querySelector('.select-all-row');
+  const optionRows = customContainer.querySelectorAll('.option-row');
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.multi-select-panel').forEach(p => {
+      if (p !== panel) p.classList.add('hidden');
+    });
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) {
+      search.value = '';
+      optionRows.forEach(row => { row.style.display = 'flex'; });
+      search.focus();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!customContainer.contains(e.target)) {
+      panel.classList.add('hidden');
+    }
+  });
+
+  panel.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  search.addEventListener('input', () => {
+    const query = search.value.toLowerCase();
+    optionRows.forEach(row => {
+      const val = row.getAttribute('data-value').toLowerCase();
+      if (val.includes(query)) {
+        row.style.display = 'flex';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+
+  function updateLabel() {
+    const labelSpan = trigger.querySelector('.multi-select-label');
+    if (selectedValues.length === 0) {
+      labelSpan.innerText = placeholder;
+      labelSpan.classList.add('text-slate-400');
+    } else if (selectedValues.length === options.length) {
+      labelSpan.innerText = "เลือกทุกแบรนด์ (" + selectedValues.length + ")";
+      labelSpan.classList.remove('text-slate-400');
+    } else {
+      labelSpan.innerText = selectedValues.join(', ');
+      labelSpan.classList.remove('text-slate-400');
+    }
+    
+    selectAllCheckbox.checked = (selectedValues.length === options.length && options.length > 0);
+    customContainer.selectedValues = selectedValues;
+  }
+
+  function setChecked(value, isChecked) {
+    if (isChecked) {
+      if (!selectedValues.includes(value)) selectedValues.push(value);
+    } else {
+      selectedValues = selectedValues.filter(v => v !== value);
+    }
+    
+    const chk = customContainer.querySelector(`.multi-select-opt[value="${CSS.escape(value)}"]`);
+    if (chk) chk.checked = isChecked;
+
+    updateLabel();
+    onChange(selectedValues);
+  }
+
+  optionRows.forEach(row => {
+    const checkbox = row.querySelector('.multi-select-opt');
+    const val = checkbox.value;
+
+    row.addEventListener('click', (e) => {
+      if (e.target !== checkbox) {
+        checkbox.checked = !checkbox.checked;
+      }
+      setChecked(val, checkbox.checked);
+    });
+  });
+
+  function setSelectAll(isChecked) {
+    selectedValues = isChecked ? options.map(o => o.value) : [];
+    customContainer.querySelectorAll('.multi-select-opt').forEach(chk => {
+      chk.checked = isChecked;
+    });
+    updateLabel();
+    onChange(selectedValues);
+  }
+
+  selectAllRow.addEventListener('click', (e) => {
+    if (e.target !== selectAllCheckbox) {
+      selectAllCheckbox.checked = !selectAllCheckbox.checked;
+    }
+    setSelectAll(selectAllCheckbox.checked);
+  });
+
+  // Sync initial checked visual state
+  selectedValues.forEach(val => {
+    const chk = customContainer.querySelector(`.multi-select-opt[value="${CSS.escape(val)}"]`);
+    if (chk) chk.checked = true;
+  });
+  updateLabel();
+}
+
+function syncMultiSelectFilters(type, values) {
+  state.filters[type] = values;
+  const ids = ['scheduler-filter-brand', 'calendar-filter-brand'];
+  ids.forEach(id => {
+    const multi = document.getElementById(id + '-multi');
+    if (multi) {
+      multi.selectedValues = [...values];
+      const optCheckboxes = multi.querySelectorAll('.multi-select-opt');
+      optCheckboxes.forEach(chk => {
+        chk.checked = values.includes(chk.value);
+      });
+      
+      const selectAll = multi.querySelector('.multi-select-all');
+      const optionsCount = optCheckboxes.length;
+      if (selectAll) {
+        selectAll.checked = (values.length === optionsCount && optionsCount > 0);
+      }
+      
+      const label = multi.querySelector('.multi-select-label');
+      if (label) {
+        if (values.length === 0) {
+          label.innerText = 'ทุกแบรนด์';
+          label.classList.add('text-slate-400');
+        } else if (values.length === optionsCount) {
+          label.innerText = "เลือกทุกแบรนด์ (" + values.length + ")";
+          label.classList.remove('text-slate-400');
+        } else {
+          label.innerText = values.join(', ');
+          label.classList.remove('text-slate-400');
+        }
+      }
+    }
+  });
+}
+
+function getMultiSelectValues(selectId) {
+  const container = document.getElementById(selectId + '-multi');
+  if (!container) return [];
+  return container.selectedValues || [];
+}
+
+/**
+ * Excel/CSV Template Import Modals and Logic
+ */
+function openImportModal() {
+  const modal = document.getElementById('import-modal');
+  if (!modal) return;
+  
+  modal.classList.remove('hidden');
+  state.parsedImportRows = [];
+  
+  // Clear visual previews
+  const previewSection = document.getElementById('import-preview-section');
+  if (previewSection) previewSection.classList.add('hidden');
+  
+  const tbody = document.getElementById('import-preview-table-body');
+  if (tbody) tbody.innerHTML = '';
+  
+  const submitBtn = document.getElementById('btn-submit-import');
+  if (submitBtn) submitBtn.disabled = true;
+
+  // Initialize file listeners (one-time logic or check for init flag)
+  const dragZone = document.getElementById('import-drag-zone');
+  const fileInput = document.getElementById('import-file-input');
+  
+  if (dragZone && !dragZone.dataset.wired) {
+    dragZone.dataset.wired = "true";
+    
+    dragZone.addEventListener('click', () => fileInput.click());
+    
+    dragZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dragZone.classList.add('border-brand-500', 'bg-brand-50/5');
+    });
+    
+    dragZone.addEventListener('dragleave', () => {
+      dragZone.classList.remove('border-brand-500', 'bg-brand-50/5');
+    });
+    
+    dragZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragZone.classList.remove('border-brand-500', 'bg-brand-50/5');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        handleCSVFileSelect(files[0]);
+      }
+    });
+    
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        handleCSVFileSelect(fileInput.files[0]);
+      }
+    });
+  }
+  
+  lucide.createIcons();
+}
+
+function closeImportModal() {
+  const modal = document.getElementById('import-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function handleCSVFileSelect(file) {
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const text = e.target.result;
+    try {
+      const rawRows = parseCSV(text);
+      validateCSVBookings(rawRows);
+    } catch (err) {
+      showToast("ไม่สามารถอ่านรูปแบบไฟล์ CSV ได้: " + err.message, "error");
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// RFC-compliant CSV Parser supporting quotes and linebreaks in cells
+function parseCSV(text) {
+  const lines = [];
+  let row = [""];
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i+1];
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        row[row.length - 1] += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if ((char === ',' || char === ';') && !inQuotes) {
+      row.push('');
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        i++;
+      }
+      lines.push(row);
+      row = [''];
+    } else {
+      row[row.length - 1] += char;
+    }
+  }
+  if (row.length > 1 || row[0] !== '') {
+    lines.push(row);
+  }
+  return lines;
+}
+
+function validateCSVBookings(rawRows) {
+  if (rawRows.length < 2) {
+    showToast("ไฟล์นี้ไม่มีข้อมูลสำหรับนำเข้า", "error");
+    return;
+  }
+
+  const headers = rawRows[0].map(h => h.trim().toLowerCase());
+  
+  // Identify column indices using Thai/English fallback mapping
+  const idxDate = headers.findIndex(h => h.includes('วัน') || h.includes('date'));
+  const idxRoom = headers.findIndex(h => h.includes('ห้อง') || h.includes('room'));
+  const idxStart = headers.findIndex(h => h.includes('เริ่ม') || h.includes('start'));
+  const idxEnd = headers.findIndex(h => h.includes('สิ้นสุด') || h.includes('end'));
+  const idxBrand = headers.findIndex(h => h.includes('แบรนด์') || h.includes('brand'));
+  const idxCampaign = headers.findIndex(h => h.includes('แคมเปญ') || h.includes('campaign'));
+  const idxBrief = headers.findIndex(h => h.includes('บรีฟ') || h.includes('รายละเอียด') || h.includes('brief'));
+  const idxRemark = headers.findIndex(h => h.includes('หมายเหตุ') || h.includes('remark'));
+
+  if (idxDate === -1 || idxRoom === -1 || idxStart === -1 || idxEnd === -1 || idxBrand === -1) {
+    showToast("คอลัมน์ในไฟล์ไม่ถูกต้องตามเทมเพลต กรุณาใช้ไฟล์ตัวอย่างที่กำหนดให้ดาวน์โหลด", "error");
+    return;
+  }
+
+  const bookingsPool = state.calendarBookings || [];
+  const roomsList = (state.rooms || []).map(r => r.name.toLowerCase().trim());
+  const brandsList = (state.brands || []).map(b => b.name.toLowerCase().trim());
+
+  const parsedRows = [];
+  let successCount = 0;
+  let conflictCount = 0;
+
+  for (let i = 1; i < rawRows.length; i++) {
+    const cells = rawRows[i];
+    if (cells.length < 5 || !cells[idxDate] || !cells[idxRoom] || !cells[idxStart] || !cells[idxEnd] || !cells[idxBrand]) {
+      continue; // Skip empty rows
+    }
+
+    const dateVal = cells[idxDate].trim();
+    const roomVal = cells[idxRoom].trim();
+    const startVal = cells[idxStart].trim();
+    const endVal = cells[idxEnd].trim();
+    const brandVal = cells[idxBrand].trim();
+    const campaignVal = idxCampaign !== -1 && cells[idxCampaign] ? cells[idxCampaign].trim() : '';
+    const briefVal = idxBrief !== -1 && cells[idxBrief] ? cells[idxBrief].trim() : '';
+    const remarkVal = idxRemark !== -1 && cells[idxRemark] ? cells[idxRemark].trim() : '';
+
+    const startMins = parseTimeToMinutes(startVal);
+    const endMins = parseTimeToMinutes(endVal);
+
+    let statusSuccess = true;
+    let errorReason = '';
+
+    // 1. Basic validation
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      statusSuccess = false;
+      errorReason = 'รูปแบบวันที่ต้องเป็น YYYY-MM-DD เช่น 2026-07-20';
+    } else if (startMins === -1 || endMins === -1 || startMins >= endMins) {
+      statusSuccess = false;
+      errorReason = 'ช่วงเวลาไม่ถูกต้อง เช่น 10:00 - 12:00';
+    } else if (!roomsList.includes(roomVal.toLowerCase())) {
+      statusSuccess = false;
+      errorReason = 'ไม่พบชื่อห้องสตูดิโอนี้ในระบบ';
+    } else if (!brandsList.includes(brandVal.toLowerCase())) {
+      statusSuccess = false;
+      errorReason = 'ไม่พบชื่อแบรนด์ลูกค้านี้ในระบบ';
+    }
+
+    // 2. Overlap validation against database bookings
+    if (statusSuccess) {
+      const conflict = bookingsPool.find(b => {
+        if (b.status === 'Cancelled') return false;
+        if (b.roomName.toLowerCase().trim() !== roomVal.toLowerCase() || b.date !== dateVal) return false;
+        const bStart = parseTimeToMinutes(b.startTime);
+        const bEnd = parseTimeToMinutes(b.endTime);
+        return !(endMins <= bStart || startMins >= bEnd);
+      });
+
+      if (conflict) {
+        statusSuccess = false;
+        errorReason = `ชนกับคิวจองแคมเปญ "${conflict.campaignName}" (${conflict.brandName}) เวลา ${conflict.startTime}-${conflict.endTime}`;
+      }
+    }
+
+    // 3. Overlap validation within the CSV file itself
+    if (statusSuccess) {
+      const fileConflict = parsedRows.find(b => {
+        if (b.roomName.toLowerCase().trim() !== roomVal.toLowerCase() || b.date !== dateVal) return false;
+        const bStart = parseTimeToMinutes(b.startTime);
+        const bEnd = parseTimeToMinutes(b.endTime);
+        return !(endMins <= bStart || startMins >= bEnd);
+      });
+
+      if (fileConflict) {
+        statusSuccess = false;
+        errorReason = `ตารางชนกันเองภายในไฟล์กับลำดับที่ ${fileConflict.index} เวลา ${fileConflict.startTime}-${fileConflict.endTime}`;
+      }
+    }
+
+    if (statusSuccess) successCount++;
+    else conflictCount++;
+
+    parsedRows.push({
+      index: i,
+      date: dateVal,
+      roomName: roomVal,
+      startTime: startVal,
+      endTime: endVal,
+      brandName: brandVal,
+      campaignName: campaignVal || 'Live Streaming',
+      briefText: briefVal,
+      remark: remarkVal,
+      success: statusSuccess,
+      reason: errorReason
+    });
+  }
+
+  state.parsedImportRows = parsedRows;
+
+  // Render Table Previews
+  const tbody = document.getElementById('import-preview-table-body');
+  tbody.innerHTML = '';
+  
+  parsedRows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.className = row.success 
+      ? "bg-emerald-50/20 dark:bg-emerald-950/10 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 text-slate-800 dark:text-slate-200 transition-all border-b border-slate-100 dark:border-slate-800" 
+      : "bg-rose-50/20 dark:bg-rose-950/10 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 text-slate-800 dark:text-slate-200 transition-all border-b border-slate-100 dark:border-slate-800";
+      
+    tr.innerHTML = `
+      <td class="p-3 font-semibold text-slate-400">${row.index}</td>
+      <td class="p-3 font-semibold">${row.date}</td>
+      <td class="p-3 font-bold">${escapeHtml(row.roomName)}</td>
+      <td class="p-3">${row.startTime} - ${row.endTime} น.</td>
+      <td class="p-3 font-semibold text-brand-600 dark:text-brand-400">${escapeHtml(row.brandName)} <span class="text-[10px] text-slate-400 dark:text-slate-500">(${escapeHtml(row.campaignName)})</span></td>
+      <td class="p-3 font-bold">
+        ${row.success 
+          ? `<span class="flex items-center gap-1 text-emerald-600"><i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i> ตรวจสอบผ่าน</span>` 
+          : `<span class="flex items-center gap-1 text-rose-600"><i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i> ${row.reason}</span>`}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const previewSection = document.getElementById('import-preview-section');
+  if (previewSection) previewSection.classList.remove('hidden');
+
+  const statText = document.getElementById('import-stat-summary');
+  if (statText) {
+    statText.innerText = `พร้อมจอง ${successCount} รายการ / ขัดแย้ง ${conflictCount} รายการ`;
+    statText.className = conflictCount > 0 ? "font-bold text-rose-600 animate-pulse" : "font-bold text-emerald-600";
+  }
+
+  // Enable Confirm button ONLY if there is at least 1 parsed row AND 0 conflicts
+  const submitBtn = document.getElementById('btn-submit-import');
+  if (submitBtn) {
+    submitBtn.disabled = (successCount === 0 || conflictCount > 0);
+  }
+
+  lucide.createIcons();
+}
+
+function executeImportBookings() {
+  const list = state.parsedImportRows;
+  if (!list || list.length === 0) return;
+  
+  const validList = list.filter(r => r.success);
+  if (validList.length === 0) return;
+
+  const bookingsList = validList.map(r => ({
+    roomName: r.roomName,
+    date: r.date,
+    startTime: r.startTime,
+    endTime: r.endTime,
+    brandName: r.brandName,
+    campaignName: r.campaignName,
+    briefText: r.briefText,
+    remark: r.remark,
+    status: 'Confirmed'
+  }));
+
+  closeImportModal();
+  showToast("กำลังนำเข้าตารางข้อมูลคิวจองห้อง...", "info");
+
+  apiCall('createBookingsBulk', { bookingsList }, (err, data) => {
+    if (err) {
+      showToast("เกิดข้อผิดพลาดในการนำข้อมูลเข้าคิวจอง: " + err, "error");
+    } else {
+      showToast("นำเข้าคิวการจองห้องทั้งหมดสำเร็จเรียบร้อยแล้ว!", "success");
+      
+      // Force refresh to pull fresh listings from Supabase database
+      invalidateTabCache('scheduler', 'my-bookings', 'calendar', 'analytics', 'campaign-schedule');
+      refreshActiveTabData();
+    }
+  });
 }

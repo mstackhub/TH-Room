@@ -299,6 +299,10 @@
                 <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
                 <input type="search" id="scheduler-search" placeholder="ค้นหาแคมเปญ / แบรนด์..." oninput="handleSchedulerSearch(this.value)" class="w-full text-sm pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" autocomplete="off">
               </div>
+              <button onclick="openImportModal()" id="btn-import-booking" class="write-only hidden px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-indigo-500/20 flex items-center gap-1.5 transition-all">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                นำเข้าคิวจอง Excel
+              </button>
               <button onclick="openBookingModal()" id="btn-create-booking" class="write-only hidden px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 จองห้องไลฟ์
@@ -1370,6 +1374,73 @@
           <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg shadow-md shadow-brand-500/20">อัปเดตรหัสผ่าน</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- G. EXCEL/CSV IMPORT MODAL -->
+  <div id="import-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass-modal w-full max-w-4xl p-6 rounded-2xl shadow-xl flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200 shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-indigo-500"></i>
+          <h3 class="text-base font-bold text-slate-950">นำเข้าคิวการจองห้องด้วย Excel (CSV Template)</h3>
+        </div>
+        <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="flex flex-col gap-4 py-4 overflow-y-auto flex-1 text-slate-700">
+        <!-- Explainer & Download Link -->
+        <div class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div class="flex flex-col gap-1">
+            <span class="font-bold text-indigo-950">💡 ขั้นตอนการจองแบบกลุ่มผ่านไฟล์ Excel:</span>
+            <span class="text-slate-600">ดาวน์โหลดไฟล์เทมเพลต CSV กรอกข้อมูล วันที่, ห้อง, ช่วงเวลา, แบรนด์ แล้วนำมาอัปโหลดเพื่อตรวจตารางเวลาซ้ำซ้อนก่อนทำการบันทึกจริง</span>
+          </div>
+          <a href="data:text/csv;charset=utf-8,%EF%BB%BFวันที่ (YYYY-MM-DD),ห้องสตูดิโอ,เวลาเริ่ม (HH:MM),เวลาสิ้นสุด (HH:MM),แบรนด์ลูกค้า,ชื่อแคมเปญ,รายละเอียดบรีฟ,หมายเหตุ%0A2026-07-20,Room 01,10:00,12:00,Glory,Live Mega Sale 7.7,รายละเอียดบรีฟย่อ,หมายเหตุเสริม" 
+             download="Live_Booking_Template.csv"
+             class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-all text-center shrink-0">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> ดาวน์โหลด Template (.csv)
+          </a>
+        </div>
+
+        <!-- File Select Container -->
+        <div id="import-drag-zone" class="border-2 border-dashed border-slate-200 hover:border-brand-400 bg-slate-50/55 rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2">
+          <i data-lucide="upload-cloud" class="w-10 h-10 text-slate-400"></i>
+          <span class="text-sm font-semibold text-slate-800">เลือกไฟล์ Template หรือ ลากไฟล์มาวางที่นี่</span>
+          <span class="text-xs text-slate-400">รองรับเฉพาะไฟล์ .csv (UTF-8)</span>
+          <input type="file" id="import-file-input" accept=".csv" class="hidden">
+        </div>
+
+        <!-- Validation Results Section -->
+        <div id="import-preview-section" class="hidden flex flex-col gap-2 flex-1">
+          <div class="flex items-center justify-between font-bold text-xs text-slate-500 px-1 px-1">
+            <span>ผลการวิเคราะห์คิวจองในไฟล์:</span>
+            <span id="import-stat-summary" class="text-brand-600">พร้อมจอง 0 รายการ / ขัดแย้ง 0 รายการ</span>
+          </div>
+          
+          <div class="border border-slate-200 rounded-xl overflow-x-auto max-h-[30vh]">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 font-semibold text-slate-600">
+                  <th class="p-3">ลำดับ</th>
+                  <th class="p-3">วันที่</th>
+                  <th class="p-3">ห้องสตูดิโอ</th>
+                  <th class="p-3">ช่วงเวลา</th>
+                  <th class="p-3">แบรนด์ / แคมเปญ</th>
+                  <th class="p-3">สถานะตรวจสอบตารางชน</th>
+                </tr>
+              </thead>
+              <tbody id="import-preview-table-body" class="divide-y divide-slate-100 font-medium">
+                <!-- Preview Rows Loaded Dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 justify-end pt-4 border-t border-slate-200 shrink-0">
+        <button type="button" onclick="closeImportModal()" class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-semibold transition-all">ยกเลิก</button>
+        <button type="button" id="btn-submit-import" onclick="executeImportBookings()" disabled class="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed">ยืนยันนำเข้าข้อมูล</button>
+      </div>
     </div>
   </div>
 

@@ -857,15 +857,10 @@ function createBooking(ss, user, bData) {
   var bookingId = "BK_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
   var createdAt = new Date();
   
-  // Automatically create Google Drive folder for this session
+  // Automatically create Google Drive folder for this session - DISABLED as requested
   var folderUrl = "";
-  try {
-    folderUrl = createSessionDriveFolder(bData.brandName, dateStr, bData.startTime, bData.campaignName);
-  } catch (err) {
-    Logger.log("Folder creation failed on createBooking: " + err.toString());
-  }
   
-  // Parse and prepend the auto-generated Google Drive folder to lsArtworkLayout
+  // Parse and use the client-provided lsArtworkLayout
   var artworkLayout = bData.lsArtworkLayout || "";
   var artworkList = [];
   if (artworkLayout) {
@@ -876,10 +871,6 @@ function createBooking(ss, user, bData) {
         artworkList = [{ type: "Other", url: artworkLayout.trim() }];
       }
     }
-  }
-  if (folderUrl) {
-    // Unshift to place Google Drive as the first primary link
-    artworkList.unshift({ type: "Google Drive", url: folderUrl });
   }
   artworkLayout = artworkList.length > 0 ? JSON.stringify(artworkList) : "";
   
